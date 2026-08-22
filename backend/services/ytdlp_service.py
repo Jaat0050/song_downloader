@@ -12,15 +12,22 @@ SUPPORTED_DOMAINS = [
     r'^(https?://)?(www\.)?youtube-nocookie\.com/'
 ]
 
-def is_valid_url(url: str) -> bool:
+def clean_url(url: str) -> str:
     if not url or not isinstance(url, str):
-        return False
+        return ""
     url_stripped = url.strip()
-    return any(re.search(pattern, url_stripped, re.IGNORECASE) for pattern in SUPPORTED_DOMAINS)
+    if not url_stripped.startswith("http://") and not url_stripped.startswith("https://"):
+        url_stripped = "https://" + url_stripped
+    return url_stripped
+
+def is_valid_url(url: str) -> bool:
+    cleaned = clean_url(url)
+    return bool(cleaned) and any(re.search(pattern, cleaned, re.IGNORECASE) for pattern in SUPPORTED_DOMAINS)
 
 class YtDlpService:
     @staticmethod
     def get_info(url: str) -> Dict[str, Any]:
+        url = clean_url(url)
         if not is_valid_url(url):
             raise ValueError("Invalid or unsupported media URL.")
 
@@ -34,7 +41,7 @@ class YtDlpService:
             'format': 'bestaudio/best',
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['mweb', 'ios', 'android', 'web'],
+                    'player_client': ['android', 'web'],
                 }
             },
         }
@@ -61,6 +68,7 @@ class YtDlpService:
 
     @staticmethod
     def download(url: str, output_template: str, progress_hook: Optional[Any] = None) -> Dict[str, Any]:
+        url = clean_url(url)
         if not is_valid_url(url):
             raise ValueError("Invalid or unsupported media URL.")
 
@@ -82,7 +90,7 @@ class YtDlpService:
             'progress_hooks': hooks,
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['mweb', 'ios', 'android', 'web'],
+                    'player_client': ['android', 'web'],
                 }
             },
         }
