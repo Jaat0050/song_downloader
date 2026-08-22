@@ -24,6 +24,8 @@ def is_valid_url(url: str) -> bool:
     cleaned = clean_url(url)
     return bool(cleaned) and any(re.search(pattern, cleaned, re.IGNORECASE) for pattern in SUPPORTED_DOMAINS)
 
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1'
+
 class YtDlpService:
     @staticmethod
     def get_info(url: str) -> Dict[str, Any]:
@@ -39,9 +41,10 @@ class YtDlpService:
             'noplaylist': True,
             'no_color': True,
             'format': 'bestaudio/best',
+            'user_agent': DEFAULT_USER_AGENT,
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web'],
+                    'player_client': ['ios', 'android'],
                 }
             },
         }
@@ -88,9 +91,10 @@ class YtDlpService:
             'no_color': True,
             'restrictfilenames': True,
             'progress_hooks': hooks,
+            'user_agent': DEFAULT_USER_AGENT,
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web'],
+                    'player_client': ['ios', 'android'],
                 }
             },
         }
