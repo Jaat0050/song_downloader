@@ -57,7 +57,7 @@ class YtDlpService:
             'skip_download': True,
             'noplaylist': True,
             'no_color': True,
-            'format': 'bestaudio/best',
+            'format': 'bestaudio/best/ba/b',
             'user_agent': DEFAULT_USER_AGENT,
             'extractor_args': {
                 'youtube': {
@@ -99,7 +99,7 @@ class YtDlpService:
         hooks = [progress_hook] if progress_hook else []
 
         ydl_opts = {
-            'format': 'bestaudio/best',
+            'format': 'bestaudio/best/ba/b',
             'outtmpl': output_template,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
