@@ -1,3 +1,4 @@
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,20 +7,23 @@ plugins {
 
 android {
     namespace = "com.example.song_downloder"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 36
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions { jvmTarget = JavaVersion.VERSION_11.toString() }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
 
     defaultConfig {
         applicationId = "com.example.song_downloder"
         minSdk = 24
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -27,14 +31,14 @@ android {
     buildTypes {
         release { signingConfig = signingConfigs.getByName("debug") }
     }
+}
 
-    packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    }
+flutter {
+    source = "../.."
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("dev.ffmpegkit-maintained:yt-dlp-android:2.0.2")
 }
 
-flutter { source = "../.." }

@@ -7,12 +7,13 @@ import io.flutter.plugin.common.MethodChannel
 import dev.ffmpegkit_maintained.ytdlp.DownloadProgressCallback
 import dev.ffmpegkit_maintained.ytdlp.YtDlp
 import dev.ffmpegkit_maintained.ytdlp.YtDlpRequest
+import dev.ffmpegkit_maintained.ytdlp.YtDlpResponse
 import java.io.File
 import java.util.concurrent.Future
 
 class MainActivity : FlutterActivity() {
     private val channelName = "song_downloader/native"
-    private var activeJob: Future<*>? = null
+    private var activeJob: Future<YtDlpResponse>? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -54,10 +55,12 @@ class MainActivity : FlutterActivity() {
         val outputTemplate = File(musicDir, "%(title)s.%(ext)s").absolutePath
         val request = YtDlpRequest(url)
             .setOutputTemplate(outputTemplate)
-            .addOption("-f", "bestaudio")
+            .addOption("-f", "bestaudio/best")
             .addOption("--no-playlist")
             .addOption("--newline")
             .addOption("--restrict-filenames")
+            .addOption("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1")
+            .addOption("--extractor-args", "youtube:player_client=ios,mweb")
 
         try {
             YtDlp.init(applicationContext)
