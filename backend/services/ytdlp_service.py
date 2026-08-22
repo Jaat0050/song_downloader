@@ -1,7 +1,8 @@
+import base64
 import logging
 import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import yt_dlp
 
@@ -38,34 +39,110 @@ def is_valid_url(url: str) -> bool:
     )
 
 
+def _validate_netscape_cookie_content(content: str) -> Tuple[bool, int, str]:
+    """Validate a cookies.txt value without ever logging cookie values."""
+    if not content or not content.strip():
+        return False, 0, 'empty'
+
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    cookie_lines = [
+        line for line in lines
+        if not line.startswith('#') and len(line.split('\t')) >= 7
+    ]
+
+    if not cookie_lines:
+        return False, 0, 'not_netscape_format'
+
+    youtube_lines = [
+        line for line in cookie_lines
+        if '.youtube.com' in line.lower() or 'youtube.com' in line.lower()
+    ]
+    return True, len(youtube_lines), 'ok'
+
+
+def _write_cookie_file(content: str, path: str) -> Optional[str]:
+    try:
+        with open(path, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(content.rstrip('\n') + '\n')
+        return path
+    except Exception as e:
+        logger.warning('Failed to write YouTube cookies: %s', e)
+        return None
+
+
 def _get_cookie_file() -> Optional[str]:
+    # Local file is useful for local development. Never commit this file.
     local_cookies = os.path.abspath(
         os.path.join(os.path.dirname(__file__), '..', 'cookies.txt')
     )
     if os.path.exists(local_cookies):
-        return local_cookies
-
-    env_cookies = os.getenv('YOUTUBE_COOKIES')
-    if env_cookies and env_cookies.strip():
-        tmp_path = '/tmp/youtube_cookies.txt'
         try:
-            with open(tmp_path, 'w', encoding='utf-8') as f:
-                f.write(env_cookies.strip() + '\n')
-            return tmp_path
+            with open(local_cookies, 'r', encoding='utf-8') as f:
+                content = f.read()
+            valid, youtube_count, reason = _validate_netscape_cookie_content(content)
+            if valid:
+                logger.info(
+                    'YouTube cookies loaded from local cookies.txt (%d YouTube cookie entries).',
+                    youtube_count,
+                )
+                return local_cookies
+            logger.warning('Local cookies.txt is not valid Netscape cookies (%s).', reason)
         except Exception as e:
-            logger.warning('Failed to write YOUTUBE_COOKIES to temporary file: %s', e)
+            logger.warning('Could not read local cookies.txt: %s', e)
 
+    # Preferred Render configuration: store the Netscape cookies.txt content in
+    # YOUTUBE_COOKIES. Do not log this value or expose it through an API.
+    env_cookies = os.getenv('YOUTUBE_COOKIES', '')
+    if env_cookies.strip():
+        valid, youtube_count, reason = _validate_netscape_cookie_content(env_cookies)
+        if not valid:
+            logger.error(
+                'YOUTUBE_COOKIES is present but is not a valid Netscape cookies.txt '
+                'value (%s). Export cookies in Netscape format.',
+                reason,
+            )
+        else:
+            tmp_path = '/tmp/youtube_cookies.txt'
+            path = _write_cookie_file(env_cookies, tmp_path)
+            if path:
+                logger.info(
+                    'YouTube cookies loaded from YOUTUBE_COOKIES (%d YouTube cookie entries).',
+                    youtube_count,
+                )
+                return path
+
+    # Optional safer transport for environments where multiline environment
+    # variables are inconvenient. The secret itself must be base64 of the same
+    # Netscape cookies.txt file.
+    env_b64 = os.getenv('YOUTUBE_COOKIES_BASE64', '')
+    if env_b64.strip():
+        try:
+            decoded = base64.b64decode(env_b64, validate=True).decode('utf-8')
+            valid, youtube_count, reason = _validate_netscape_cookie_content(decoded)
+            if not valid:
+                logger.error(
+                    'YOUTUBE_COOKIES_BASE64 is present but invalid (%s).', reason
+                )
+            else:
+                tmp_path = '/tmp/youtube_cookies.txt'
+                path = _write_cookie_file(decoded, tmp_path)
+                if path:
+                    logger.info(
+                        'YouTube cookies loaded from YOUTUBE_COOKIES_BASE64 '
+                        '(%d YouTube cookie entries).',
+                        youtube_count,
+                    )
+                    return path
+        except Exception as e:
+            logger.error('Could not decode YOUTUBE_COOKIES_BASE64: %s', e)
+
+    logger.info('No valid YouTube cookies configured.')
     return None
 
 
 def _get_yt_dlp_options(*, download: bool, output_template: Optional[str] = None,
                         progress_hook: Optional[Any] = None) -> Dict[str, Any]:
-    """Build one consistent yt-dlp configuration for both metadata and downloads.
-
-    The old implementation forced iOS/Android YouTube clients. That can result in
-    an incomplete format list on current YouTube. We deliberately let the current
-    yt-dlp extractor choose its supported/default clients instead.
-    """
+    """Build one consistent yt-dlp configuration for metadata and downloads."""
     options: Dict[str, Any] = {
         'quiet': not Config.YTDLP_VERBOSE,
         'no_warnings': not Config.YTDLP_VERBOSE,
@@ -73,9 +150,6 @@ def _get_yt_dlp_options(*, download: bool, output_template: Optional[str] = None
         'noplaylist': True,
         'no_color': True,
         'user_agent': DEFAULT_USER_AGENT,
-        # Keep metadata extraction useful even when a particular client temporarily
-        # exposes no downloadable formats. The download endpoint still requires a
-        # real format and will report a clear failure if none is available.
         'ignore_no_formats_error': not download,
     }
 
@@ -99,9 +173,6 @@ def _get_yt_dlp_options(*, download: bool, output_template: Optional[str] = None
         if os.path.isfile(ffmpeg_path) and os.access(ffmpeg_path, os.X_OK):
             options['ffmpeg_location'] = ffmpeg_bin
 
-    # Current yt-dlp requires a supported JS runtime for full YouTube extraction.
-    # Explicitly point yt-dlp at our Render-installed Deno binary so this does not
-    # depend on Render's PATH.
     deno_path = Config.DENO_PATH
     if deno_path and os.path.isfile(deno_path) and os.access(deno_path, os.X_OK):
         options['js_runtimes'] = {
@@ -113,6 +184,11 @@ def _get_yt_dlp_options(*, download: bool, output_template: Optional[str] = None
     cookie_file = _get_cookie_file()
     if cookie_file:
         options['cookiefile'] = cookie_file
+        logger.info(
+            'yt-dlp %s cookies authentication enabled for %s.',
+            'download' if download else 'metadata',
+            'YouTube',
+        )
 
     return options
 
@@ -140,7 +216,6 @@ class YtDlpService:
             thumbnail = info.get('thumbnail') or ''
             thumbnails = info.get('thumbnails')
             if isinstance(thumbnails, list) and thumbnails:
-                # Prefer the last/highest-quality thumbnail exposed by yt-dlp.
                 for item in reversed(thumbnails):
                     if item.get('url'):
                         thumbnail = item['url']
