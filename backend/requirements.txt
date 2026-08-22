@@ -1,0 +1,5 @@
+Flask>=3.0.0
+flask-cors>=4.0.0
+yt-dlp>=2025.01.26
+gunicorn>=21.2.0
+pytest>=8.0.0
