@@ -26,6 +26,23 @@ def is_valid_url(url: str) -> bool:
 
 DEFAULT_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1'
 
+def _get_cookie_file() -> Optional[str]:
+    local_cookies = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cookies.txt"))
+    if os.path.exists(local_cookies):
+        return local_cookies
+
+    env_cookies = os.getenv("YOUTUBE_COOKIES")
+    if env_cookies and env_cookies.strip():
+        tmp_path = "/tmp/youtube_cookies.txt"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(env_cookies.strip() + "\n")
+            return tmp_path
+        except Exception as e:
+            logger.warning("Failed to write env YOUTUBE_COOKIES to tmp file: %s", e)
+
+    return None
+
 class YtDlpService:
     @staticmethod
     def get_info(url: str) -> Dict[str, Any]:
@@ -48,6 +65,10 @@ class YtDlpService:
                 }
             },
         }
+
+        cookie_file = _get_cookie_file()
+        if cookie_file:
+            ydl_opts['cookiefile'] = cookie_file
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -98,6 +119,10 @@ class YtDlpService:
                 }
             },
         }
+
+        cookie_file = _get_cookie_file()
+        if cookie_file:
+            ydl_opts['cookiefile'] = cookie_file
 
         ffmpeg_bin = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
         if os.path.exists(os.path.join(ffmpeg_bin, "ffmpeg")):
