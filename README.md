@@ -1,17 +1,47 @@
-# song_downloder
+# Song Downloader
 
-A new Flutter project.
+A personal-use Flutter + Android application for downloading the best available **audio-only stream** from a YouTube URL that you are authorized to save.
 
-## Getting Started
+## Stack
 
-This project is a starting point for a Flutter application.
+- Flutter UI
+- Android Kotlin platform channel
+- `yt-dlp-android` 2.0.2 for media extraction/download
+- YouTube oEmbed for lightweight title/artist/thumbnail metadata
 
-A few resources to get you started if this is your first Flutter project:
+## How it works
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```text
+Paste YouTube URL
+      ↓
+YouTube oEmbed → title / artist / thumbnail
+      ↓
+Flutter MethodChannel
+      ↓
+Android Kotlin
+      ↓
+yt-dlp → bestaudio
+      ↓
+Original audio format (.m4a / .webm / .opus, depending on source)
+      ↓
+Android app-specific Music/SongDownloader directory
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# song_downloader
+The app deliberately preserves the best available source audio instead of pretending that converting a lower-quality source to 320 kbps improves quality.
+
+## Run
+
+```bash
+flutter pub get
+flutter run
+```
+
+Android 7.0+ (API 24+) is required by the bundled `yt-dlp-android` library.
+
+## Important
+
+This is intended for personal use and authorized downloads. Respect the rights of content owners and the terms of the services you access. The app does not provide a general license to download copyrighted material.
+
+## Notes
+
+The `yt-dlp-android` AAR bundles a Python runtime and yt-dlp, so the APK/AAB is substantially larger than a typical Flutter app. Its bundled yt-dlp version is updated by changing the dependency version in `android/app/build.gradle.kts`.
