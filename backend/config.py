@@ -6,3 +6,4 @@ class Config:
     PORT = int(os.getenv("PORT", "5000"))
     DOWNLOAD_RETENTION_HOURS = int(os.getenv("DOWNLOAD_RETENTION_HOURS", "24"))
     HOST = os.getenv("HOST", "0.0.0.0")
+

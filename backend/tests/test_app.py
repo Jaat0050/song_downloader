@@ -14,6 +14,12 @@ class AppTestCase(unittest.TestCase):
         self.client = app.test_client()
         self.client.testing = True
 
+    def test_health_endpoint(self):
+        response = self.client.get("/api/health")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["status"], "healthy")
+
     def test_url_validation(self):
         self.assertTrue(is_valid_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
         self.assertTrue(is_valid_url("https://youtu.be/dQw4w9WgXcQ"))
@@ -42,8 +48,7 @@ class AppTestCase(unittest.TestCase):
             "artist": "Test Artist",
             "duration": 180,
             "thumbnail": "https://example.com/thumb.jpg",
-            "webpage_url": "https://www.youtube.com/watch?v=test_id",
-            "audio_formats": []
+            "webpage_url": "https://www.youtube.com/watch?v=test_id"
         }
         response = self.client.post("/api/audio/info", json={"url": "https://www.youtube.com/watch?v=test_id"})
         self.assertEqual(response.status_code, 200)

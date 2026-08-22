@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import uuid
 import logging
@@ -103,7 +104,7 @@ class DownloadService:
         except Exception as e:
             logger.exception("Download job %s failed", job_id)
             job['status'] = 'failed'
-            job['error'] = str(e)
+            job['error'] = re.sub(r'\x1b\[[0-9;]*m', '', str(e))
             job['updated_at'] = time.time()
 
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
@@ -126,3 +127,6 @@ class DownloadService:
 
         del self.jobs[job_id]
         return True
+
+download_service = DownloadService()
+

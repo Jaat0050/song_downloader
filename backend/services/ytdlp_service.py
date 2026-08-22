@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 from typing import Dict, Any, Optional
@@ -28,29 +29,20 @@ class YtDlpService:
             'no_warnings': True,
             'extract_flat': False,
             'skip_download': True,
+            'noplaylist': True,
+            'no_color': True,
             'format': 'bestaudio/best',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['mweb', 'ios', 'android', 'web'],
+                }
+            },
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
                 raise RuntimeError("Could not extract metadata for the requested URL.")
-
-            # Process audio formats
-            raw_formats = info.get('formats', [])
-            audio_formats = []
-            for f in raw_formats:
-                vcodec = f.get('vcodec')
-                acodec = f.get('acodec')
-                if acodec and acodec != 'none' and (not vcodec or vcodec == 'none'):
-                    audio_formats.append({
-                        'format_id': f.get('format_id'),
-                        'ext': f.get('ext'),
-                        'codec': acodec,
-                        'bitrate': f.get('abr') or f.get('tbr'),
-                        'sample_rate': f.get('asr'),
-                        'size': f.get('filesize') or f.get('filesize_approx')
-                    })
 
             thumbnail = info.get('thumbnail') or ''
             thumbnails = info.get('thumbnails')
@@ -65,7 +57,6 @@ class YtDlpService:
                 'duration': info.get('duration', 0),
                 'thumbnail': thumbnail,
                 'webpage_url': info.get('webpage_url', url),
-                'audio_formats': audio_formats
             }
 
     @staticmethod
@@ -78,19 +69,37 @@ class YtDlpService:
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': output_template,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320',
+            }],
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
+            'no_color': True,
             'restrictfilenames': True,
             'progress_hooks': hooks,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['mweb', 'ios', 'android', 'web'],
+                }
+            },
         }
+
+        ffmpeg_bin = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
+        if os.path.exists(os.path.join(ffmpeg_bin, "ffmpeg")):
+            ydl_opts['ffmpeg_location'] = ffmpeg_bin
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
+            base, _ = os.path.splitext(filename)
+            mp3_filepath = f"{base}.mp3"
+            final_filepath = mp3_filepath if os.path.exists(mp3_filepath) else filename
             return {
                 'id': info.get('id', ''),
                 'title': info.get('title', ''),
                 'artist': info.get('artist') or info.get('uploader') or 'Unknown Artist',
-                'filepath': filename
+                'filepath': final_filepath
             }

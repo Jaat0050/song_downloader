@@ -1,0 +1,198 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.example.song_downloder"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="35" />
+10    <!--
+11         The INTERNET permission is required for development. Specifically,
+12         the Flutter tool needs it to communicate with the running application
+13         to allow setting breakpoints, to provide hot reload, etc.
+14    -->
+15    <uses-permission android:name="android.permission.INTERNET" />
+15-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:2:5-67
+15-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:2:22-64
+16    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+16-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:3:5-80
+16-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:3:22-77
+17    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+17-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:4:5-81
+17-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:4:22-78
+18    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+18-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:5:5-75
+18-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:5:22-72
+19
+20    <queries>
+20-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:34:5-39:15
+21        <intent>
+21-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:35:9-38:18
+22            <action android:name="android.intent.action.PROCESS_TEXT" />
+22-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:36:13-72
+22-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:36:21-70
+23
+24            <data android:mimeType="text/plain" />
+24-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:37:13-50
+24-->/Users/mukund/Documents/personal/song_downloder/android/app/src/main/AndroidManifest.xml:37:19-48
+25        </intent>
+26    </queries>
+27
+28    <permission
+28-->[androidx.core:core:1.13.1] /Users/mukund/.gradle/caches/8.10.2/transforms/731cd9948a7dde4822052c6be439a4c3/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+29        android:name="com.example.song_downloder.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+29-->[androidx.core:core:1.13.1] /Users/mukund/.gradle/caches/8.10.2/transforms/731cd9948a7dde4822052c6be439a4c3/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+30        android:protectionLevel="signature" />
+30-->[androidx.core:core:1.13.1] /Users/mukund/.gradle/caches/8.10.2/transforms/731cd9948a7dde4822052c6be439a4c3/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+31
+32    <uses-permission android:name="com.example.song_downloder.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+32-->[androidx.core:core:1.13.1] /Users/mukund/.gradle/caches/8.10.2/transforms/731cd9948a7dde4822052c6be439a4c3/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+32-->[androidx.core:core:1.13.1] /Users/mukund/.gradle/caches/8.10.2/transforms/731cd9948a7dde4822052c6be439a4c3/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+33
+34    <application
+35        android:name="android.app.Application"
+36        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+36-->[androidx.core:core:1.13.1] /Users/mukund/.gradle/caches/8.10.2/transforms/731cd9948a7dde4822052c6be439a4c3/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+37        android:debuggable="true"
+38        android:extractNativeLibs="true"
+39        android:icon="@mipmap/ic_launcher"
+40        android:label="Song Downloader"
+41        android:requestLegacyExternalStorage="true" >
+42        <activity
+43            android:name="com.example.song_downloder.MainActivity"
+44            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+45            android:exported="true"
+46            android:hardwareAccelerated="true"
+47            android:launchMode="singleTop"
+48            android:taskAffinity=""
+49            android:theme="@style/LaunchTheme"
+50            android:windowSoftInputMode="adjustResize" >
+51            <meta-data
+52                android:name="io.flutter.embedding.android.NormalTheme"
+53                android:resource="@style/NormalTheme" />
+54
+55            <intent-filter>
+56                <action android:name="android.intent.action.MAIN" />
+57
+58                <category android:name="android.intent.category.LAUNCHER" />
+59            </intent-filter>
+60        </activity>
+61
+62        <meta-data
+63            android:name="flutterEmbedding"
+64            android:value="2" />
+65        <!--
+66           Declares a provider which allows us to store files to share in
+67           '.../caches/share_plus' and grant the receiving action access
+68        -->
+69        <provider
+69-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:9-21:20
+70            android:name="dev.fluttercommunity.plus.share.ShareFileProvider"
+70-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:13-77
+71            android:authorities="com.example.song_downloder.flutter.share_provider"
+71-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:15:13-74
+72            android:exported="false"
+72-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:16:13-37
+73            android:grantUriPermissions="true" >
+73-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:17:13-47
+74            <meta-data
+74-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:18:13-20:68
+75                android:name="android.support.FILE_PROVIDER_PATHS"
+75-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:19:17-67
+76                android:resource="@xml/flutter_share_file_paths" />
+76-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:20:17-65
+77        </provider>
+78        <!--
+79           This manifest declared broadcast receiver allows us to use an explicit
+80           Intent when creating a PendingItent to be informed of the user's choice
+81        -->
+82        <receiver
+82-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:26:9-32:20
+83            android:name="dev.fluttercommunity.plus.share.SharePlusPendingIntent"
+83-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:27:13-82
+84            android:exported="false" >
+84-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:28:13-37
+85            <intent-filter>
+85-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:29:13-31:29
+86                <action android:name="EXTRA_CHOSEN_COMPONENT" />
+86-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:30:17-65
+86-->[:share_plus] /Users/mukund/Documents/personal/song_downloder/build/share_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:30:25-62
+87            </intent-filter>
+88        </receiver>
+89
+90        <uses-library
+90-->[androidx.window:window:1.2.0] /Users/mukund/.gradle/caches/8.10.2/transforms/eaf3c33b1c2c22b1781558d0ca2e0eca/transformed/jetified-window-1.2.0/AndroidManifest.xml:23:9-25:40
+91            android:name="androidx.window.extensions"
+91-->[androidx.window:window:1.2.0] /Users/mukund/.gradle/caches/8.10.2/transforms/eaf3c33b1c2c22b1781558d0ca2e0eca/transformed/jetified-window-1.2.0/AndroidManifest.xml:24:13-54
+92            android:required="false" />
+92-->[androidx.window:window:1.2.0] /Users/mukund/.gradle/caches/8.10.2/transforms/eaf3c33b1c2c22b1781558d0ca2e0eca/transformed/jetified-window-1.2.0/AndroidManifest.xml:25:13-37
+93        <uses-library
+93-->[androidx.window:window:1.2.0] /Users/mukund/.gradle/caches/8.10.2/transforms/eaf3c33b1c2c22b1781558d0ca2e0eca/transformed/jetified-window-1.2.0/AndroidManifest.xml:26:9-28:40
+94            android:name="androidx.window.sidecar"
+94-->[androidx.window:window:1.2.0] /Users/mukund/.gradle/caches/8.10.2/transforms/eaf3c33b1c2c22b1781558d0ca2e0eca/transformed/jetified-window-1.2.0/AndroidManifest.xml:27:13-51
+95            android:required="false" />
+95-->[androidx.window:window:1.2.0] /Users/mukund/.gradle/caches/8.10.2/transforms/eaf3c33b1c2c22b1781558d0ca2e0eca/transformed/jetified-window-1.2.0/AndroidManifest.xml:28:13-37
+96
+97        <provider
+97-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
+98            android:name="androidx.startup.InitializationProvider"
+98-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:25:13-67
+99            android:authorities="com.example.song_downloder.androidx-startup"
+99-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:26:13-68
+100            android:exported="false" >
+100-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:27:13-37
+101            <meta-data
+101-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+102                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+102-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+103                android:value="androidx.startup" />
+103-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/mukund/.gradle/caches/8.10.2/transforms/a79f45dbb86cbb2c22ed31e133fc82bf/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+104            <meta-data
+104-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+105                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+106                android:value="androidx.startup" />
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+107        </provider>
+108
+109        <receiver
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+110            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+111            android:directBootAware="false"
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+112            android:enabled="true"
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+113            android:exported="true"
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+114            android:permission="android.permission.DUMP" >
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+115            <intent-filter>
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+116                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+117            </intent-filter>
+118            <intent-filter>
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+119                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+120            </intent-filter>
+121            <intent-filter>
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+122                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+123            </intent-filter>
+124            <intent-filter>
+124-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+125                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/mukund/.gradle/caches/8.10.2/transforms/7109acf505a60c1bd0a5cc92a195927b/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+126            </intent-filter>
+127        </receiver>
+128    </application>
+129
+130</manifest>
