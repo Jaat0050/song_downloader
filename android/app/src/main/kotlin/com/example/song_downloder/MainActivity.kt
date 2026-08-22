@@ -1,5 +1,7 @@
 package com.example.song_downloder
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,7 +15,9 @@ import java.util.concurrent.Future
 
 class MainActivity : FlutterActivity() {
     private val channelName = "song_downloader/native"
+    private val cookiePickerRequest = 4101
     private var activeJob: Future<YtDlpResponse>? = null
+    private var cookiePickerResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -27,20 +31,77 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "pickCookies" -> pickCookies(result)
                     "downloadAudio" -> {
                         val url = call.argument<String>("url")?.trim()
+                        val cookiesPath = call.argument<String>("cookiesPath")?.trim()
                         if (url.isNullOrBlank()) {
                             result.error("INVALID_URL", "URL is required", null)
                             return@setMethodCallHandler
                         }
-                        startDownload(url, result, flutterEngine)
+                        startDownload(url, cookiesPath, result, flutterEngine)
                     }
                     else -> result.notImplemented()
                 }
             }
     }
 
-    private fun startDownload(url: String, result: MethodChannel.Result, flutterEngine: FlutterEngine) {
+    private fun pickCookies(result: MethodChannel.Result) {
+        if (cookiePickerResult != null) {
+            result.error("BUSY", "File picker is already open", null)
+            return
+        }
+        cookiePickerResult = result
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/*"
+        }
+        startActivityForResult(intent, cookiePickerRequest)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != cookiePickerRequest) return
+
+        val callback = cookiePickerResult
+        cookiePickerResult = null
+
+        if (resultCode != Activity.RESULT_OK || data?.data == null) {
+            callback?.success(null)
+            return
+        }
+
+        val uri = data.data!!
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+            // Some providers do not support persistable permissions.
+        }
+
+        // yt-dlp expects a filesystem path. Copy the selected file into app storage.
+        try {
+            val cookiesDir = File(filesDir, "cookies")
+            if (!cookiesDir.exists()) cookiesDir.mkdirs()
+            val destination = File(cookiesDir, "youtube-cookies.txt")
+            contentResolver.openInputStream(uri).use { input ->
+                if (input == null) throw IllegalStateException("Could not open selected file")
+                destination.outputStream().use { output -> input.copyTo(output) }
+            }
+            callback?.success(destination.absolutePath)
+        } catch (e: Exception) {
+            callback?.error("COOKIE_FILE", e.message ?: "Could not import cookies file", null)
+        }
+    }
+
+    private fun startDownload(
+        url: String,
+        cookiesPath: String?,
+        result: MethodChannel.Result,
+        flutterEngine: FlutterEngine
+    ) {
         if (activeJob != null && !activeJob!!.isDone) {
             result.error("BUSY", "A download is already running", null)
             return
@@ -59,20 +120,25 @@ class MainActivity : FlutterActivity() {
             .addOption("--no-playlist")
             .addOption("--newline")
             .addOption("--restrict-filenames")
-            .addOption("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1")
-            .addOption("--extractor-args", "youtube:player_client=ios,mweb")
+
+        // The current yt-dlp Android free AAR exposes cookies as its supported
+        // YouTube authentication workaround. Do not pretend that unsupported
+        // extractor arguments are being applied: the AAR's option bridge ignores
+        // unknown flags.
+        if (!cookiesPath.isNullOrBlank() && File(cookiesPath).exists()) {
+            request.addOption("--cookies", cookiesPath)
+        }
 
         try {
             YtDlp.init(applicationContext)
             activeJob = YtDlp.executeAsync(request, object : DownloadProgressCallback {
                 override fun onProgressUpdate(progress: Float, etaInSeconds: Long, line: String) {
-                    flutterEngine.dartExecutor.binaryMessenger.let { messenger ->
-                        android.os.Handler(mainLooper).post {
-                            MethodChannel(messenger, channelName).invokeMethod(
+                    android.os.Handler(mainLooper).post {
+                        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+                            .invokeMethod(
                                 "downloadProgress",
                                 mapOf("progress" to progress, "eta" to etaInSeconds, "line" to line)
                             )
-                        }
                     }
                 }
             })
@@ -84,23 +150,32 @@ class MainActivity : FlutterActivity() {
                     runOnUiThread {
                         if (exitCode == 0) {
                             val newest = musicDir.listFiles()
-                                ?.filter { it.isFile }
+                                ?.filter { it.isFile && !it.name.endsWith(".part") }
                                 ?.maxByOrNull { it.lastModified() }
-                            result.success(mapOf(
-                                "success" to true,
-                                "path" to newest?.absolutePath
-                            ))
+                            result.success(
+                                mapOf(
+                                    "success" to true,
+                                    "path" to newest?.absolutePath
+                                )
+                            )
                         } else {
-                            result.success(mapOf(
-                                "success" to false,
-                                "error" to "yt-dlp finished with exit code $exitCode"
-                            ))
+                            result.success(
+                                mapOf(
+                                    "success" to false,
+                                    "error" to "yt-dlp could not download this media. Exit code: $exitCode. If YouTube returns 403, import a current Netscape-format YouTube cookies file and retry."
+                                )
+                            )
                         }
                         activeJob = null
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        result.success(mapOf("success" to false, "error" to (e.message ?: "Download failed")))
+                        result.success(
+                            mapOf(
+                                "success" to false,
+                                "error" to (e.message ?: "Download failed")
+                            )
+                        )
                         activeJob = null
                     }
                 }
