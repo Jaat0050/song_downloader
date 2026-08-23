@@ -36,10 +36,11 @@ android {
     }
 
     dependencies {
-        // Android-native FFmpeg library used by AudioTranscoder.kt. This keeps
-        // FFmpeg out of the Python runtime and makes MP3 conversion available
-        // directly on the device.
         implementation("dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7")
+        // ffmpeg-kit initializes this class at runtime. Explicitly declaring
+        // it avoids NoClassDefFoundError when Gradle metadata does not pull
+        // the transitive dependency into the APK.
+        implementation("com.arthenica:smart-exception-java:0.2.1")
     }
 }
 
