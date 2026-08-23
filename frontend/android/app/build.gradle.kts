@@ -1,7 +1,8 @@
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    id("org.jetbrains.kotlin.android")
+    id("com.chaquo.python")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -20,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.song_downloder"
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -31,9 +32,17 @@ android {
     }
 }
 
+chaquopy {
+    defaultConfig {
+        version = "3.11"
+        buildPython("python3")
+        pip {
+            install("Flask==3.1.0")
+            install("yt-dlp[default]==2026.08.19")
+        }
+    }
+}
+
 flutter {
     source = "../.."
 }
-
-
-
