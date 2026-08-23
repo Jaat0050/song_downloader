@@ -41,7 +41,10 @@ android {
 chaquopy {
     defaultConfig {
         version = "3.11"
-        buildPython("python3")
+        // Chaquopy must build Python 3.11 packages with a Python 3.11 host
+        // interpreter. Do not use the macOS `python3` alias, which may point
+        // to Python 3.14 on the developer machine.
+        buildPython("python3.11")
         pip {
             install("Flask==3.1.0")
             install("yt-dlp[default]==2026.08.19")
