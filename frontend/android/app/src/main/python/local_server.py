@@ -1,6 +1,9 @@
 import os
 import re
+import shutil
+import sys
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -14,6 +17,7 @@ _server = None
 _server_thread = None
 _server_url = None
 _server_files_dir = ''
+_server_started_at = None
 _jobs: Dict[str, Dict[str, Any]] = {}
 _jobs_lock = threading.Lock()
 _executor = ThreadPoolExecutor(max_workers=2)
@@ -90,9 +94,6 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
     try:
         options = _base_options()
         options.update({
-            # Download the best available audio source. FFmpeg below performs
-            # the actual conversion to MP3; it does not pretend to improve the
-            # source quality beyond what YouTube provides.
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),
             'progress_hooks': [progress_hook],
@@ -114,9 +115,6 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
 
         title = _safe_name(str(info.get('title') or Path(source_path).stem))
         mp3_path = os.path.join(download_dir, f'{title}.mp3')
-
-        # Never return the original WebM/Opus file to Flutter. The Android
-        # native FFmpeg runtime converts it to a real MP3 file first.
         _transcode_to_mp3(source_path, mp3_path)
 
         if os.path.abspath(source_path) != os.path.abspath(mp3_path):
@@ -151,6 +149,38 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
                 })
 
 
+def _directory_size(path: str) -> int:
+    total = 0
+    root = Path(path)
+    if not root.exists():
+        return 0
+    for item in root.rglob('*'):
+        try:
+            if item.is_file():
+                total += item.stat().st_size
+        except OSError:
+            pass
+    return total
+
+
+def _job_summary() -> Dict[str, int]:
+    summary = {
+        'total': 0,
+        'queued': 0,
+        'downloading': 0,
+        'processing': 0,
+        'completed': 0,
+        'failed': 0,
+    }
+    with _jobs_lock:
+        summary['total'] = len(_jobs)
+        for job in _jobs.values():
+            status = job.get('status')
+            if status in summary:
+                summary[status] += 1
+    return summary
+
+
 def create_app(files_dir: str) -> Flask:
     global _server_files_dir
     _server_files_dir = files_dir
@@ -161,13 +191,30 @@ def create_app(files_dir: str) -> Flask:
 
     @app.get('/api/health')
     def health():
+        uptime = int(time.monotonic() - _server_started_at) if _server_started_at else 0
+        usage = shutil.disk_usage(files_dir)
+        jobs = _job_summary()
         return jsonify({
             'success': True,
             'status': 'ok',
             'server': 'embedded-python',
+            'host': '127.0.0.1',
+            'port': _server.server_port if _server is not None else None,
+            'uptime_seconds': uptime,
+            'started_at': _server_started_at,
+            'python_version': sys.version.split()[0],
             'yt_dlp': yt_dlp.version.__version__,
             'audio_format': 'mp3',
             'ffmpeg': 'android-native',
+            'download_directory': download_dir,
+            'download_storage_bytes': _directory_size(download_dir),
+            'disk_free_bytes': usage.free,
+            'disk_total_bytes': usage.total,
+            'jobs': jobs,
+            'worker_pool': {
+                'max_workers': 2,
+                'status': 'ready',
+            },
         })
 
     @app.post('/api/audio/info')
@@ -253,7 +300,7 @@ def create_app(files_dir: str) -> Flask:
 
 
 def start_server(files_dir: str) -> str:
-    global _server, _server_thread, _server_url
+    global _server, _server_thread, _server_url, _server_started_at
     if _server is not None:
         return _server_url
 
@@ -261,13 +308,14 @@ def start_server(files_dir: str) -> str:
     _server = make_server('127.0.0.1', 0, app, threaded=True)
     port = _server.server_port
     _server_url = f'http://127.0.0.1:{port}'
+    _server_started_at = time.time()
     _server_thread = threading.Thread(target=_server.serve_forever, name='FlaskLocalServer', daemon=True)
     _server_thread.start()
     return _server_url
 
 
 def stop_server() -> None:
-    global _server, _server_thread, _server_url
+    global _server, _server_thread, _server_url, _server_started_at
     if _server is not None:
         try:
             _server.shutdown()
@@ -275,3 +323,4 @@ def stop_server() -> None:
             _server = None
             _server_thread = None
             _server_url = None
+            _server_started_at = None
