@@ -1,131 +1,147 @@
 # 🎵 Song Downloader
 
-A full-stack, high-performance audio downloader application featuring a **Flutter** mobile application frontend and a **Python Flask** backend powered by `yt-dlp` and `FFmpeg`.
+A personal-use Android audio downloader built with **Flutter**, an **embedded Python 3.11 + Flask server**, `yt-dlp`, and Android-native FFmpeg.
 
----
+The backend runs locally inside each Android app installation. No Render server, VPS, or external backend is required.
 
 ## ✨ Features
 
-- 🎧 **320 kbps High-Quality MP3 Downloads**: Automatically extracts and converts YouTube audio into `.mp3` format.
-- 📱 **Public Device Storage**: Downloads save directly to your phone's public folder at `/storage/emulated/0/Download/Song Downloader/` for easy access in any music player.
-- 🚀 **Fast Metadata Extraction**: Fast parsing for YouTube links, including Mix and Radio URLs (`&start_radio=1`).
-- 🤖 **Bot Check Bypass**: Built-in mobile client fallback arguments (`mweb`, `ios`, `android`) to bypass YouTube bot detection.
-- 📊 **Real-time Download Tracking**: Monitor download speed, ETA, and progress percentages in real time.
-- 🎶 **In-App Music Player**: Built-in player to listen, pause, seek, share, or delete downloaded songs inside the app.
-- ☁️ **Cloud Deployment Ready**: Pre-configured with `render.yaml` for 1-click backend deployment to **Render.com**.
-
----
+- 🎧 **MP3 Downloads**: Downloads the best available audio source and converts it to MP3 at 320 kbps.
+- 📱 **Per-device local server**: Every app installation starts its own Flask server on `127.0.0.1` using a dynamic free port.
+- 🐍 **Embedded Python**: Python 3.11 and the Flask/yt-dlp runtime are packaged with the Android app through Chaquopy.
+- ⚡ **Android-native FFmpeg**: MP3 conversion is handled by the bundled Android FFmpeg runtime.
+- 🚀 **Metadata Extraction**: Fetches YouTube title, artist/uploader, thumbnail, duration, and URL information.
+- 📊 **Real-time Download Tracking**: Reports download progress, speed, ETA, and processing state.
+- 🎶 **In-App Music Player**: Play, pause, seek, share, and delete downloaded songs from the app.
+- 🔒 **Local API Only**: The embedded Flask server listens on localhost and is not exposed publicly.
 
 ## 📁 Repository Structure
 
 ```text
 song_downloader/
-├── backend/                         # Python Flask Backend API
-│   ├── app.py                       # Main Flask app initialization & entrypoint
-│   ├── build.sh                     # Render build script (installs static FFmpeg)
-│   ├── render.yaml                  # Backend Render blueprint configuration
-│   ├── requirements.txt             # Python dependencies (Flask, yt-dlp, gunicorn)
-│   ├── routes/                      # API Route Controllers (1 endpoint per file)
-│   │   ├── info_route.py            # POST /api/audio/info
-│   │   ├── download_route.py        # POST /api/audio/download
-│   │   ├── progress_route.py        # GET  /api/audio/progress/<job_id>
-│   │   ├── file_route.py            # GET  /api/audio/file/<job_id>
-│   │   ├── job_route.py             # DELETE /api/audio/job/<job_id>
-│   │   └── health_route.py          # GET  /api/health
-│   ├── services/                    # Business Logic Services
-│   │   ├── info_service.py          # Metadata extraction service
-│   │   ├── download_service.py      # Background thread-pool job queue manager
-│   │   ├── storage_cleanup_service.py # Automated stale download cleanup
-│   │   └── ytdlp_service.py         # Low-level yt-dlp & FFmpeg processing
-│   ├── utils/                       # Response helpers
-│   └── tests/                       # Unit test suite
+├── frontend/
+│   ├── lib/
+│   │   ├── models/                 # Application models
+│   │   ├── screens/                # Flutter UI screens
+│   │   └── services/               # API, storage, and local-server services
+│   ├── android/
+│   │   └── app/
+│   │       └── src/main/
+│   │           ├── kotlin/         # Android integration + FFmpeg bridge
+│   │           └── python/         # Embedded Flask server
+│   └── pubspec.yaml
 │
-├── frontend/                        # Flutter Mobile App
-│   ├── lib/                         # App UI screens, state, models & services
-│   ├── android/                     # Android project configuration & storage permissions
-│   ├── web/                         # Web build configuration
-│   └── pubspec.yaml                 # Flutter dependencies
-│
-├── render.yaml                      # Root Render Monorepo Blueprint
-└── README.md                        # Documentation
+├── .gitignore
+└── README.md
 ```
 
----
+The old standalone Render/Python backend has been removed because it is no longer used by the application.
 
 ## 🚀 Quick Start
 
-### 1. Running the Backend Locally
+### Requirements
+
+- Flutter SDK
+- Android SDK / Android Studio
+- Android NDK
+- Python 3.11 on the development machine for Chaquopy builds
+- An ARM64 Android device or emulator for the current configuration
+
+### Run the app
 
 ```bash
-# Navigate to the backend directory
-cd backend
-
-# Create and activate a Python virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the backend server
-python app.py
-```
-
-The backend will start serving at `http://127.0.0.1:5000` (and on your local network IP `http://192.168.x.x:5000`).
-
-#### Run Backend Unit Tests
-
-```bash
-source backend/.venv/bin/activate
-python -m unittest discover -s backend/tests
-```
-
----
-
-### 2. Running the Flutter App
-
-```bash
-# Navigate to the frontend directory
 cd frontend
-
-# Install Flutter packages
 flutter pub get
-
-# Run on a connected Android device or emulator
 flutter run
 ```
 
----
+For a clean Android build:
 
-## 🌐 API Reference
+```bash
+cd frontend
+flutter clean
+cd android
+./gradlew clean
+cd ..
+flutter pub get
+flutter run
+```
+
+### Python used by Chaquopy on the current development machine
+
+The current Gradle configuration uses:
+
+```text
+/opt/homebrew/bin/python3.11
+```
+
+Update this path in `frontend/android/app/build.gradle.kts` if Python 3.11 is installed elsewhere.
+
+## 🔧 Local Server Architecture
+
+When the Android app starts:
+
+```text
+Flutter
+   ↓
+Android/Kotlin
+   ↓
+Chaquopy Python 3.11
+   ↓
+Flask
+   ↓
+127.0.0.1:<dynamic-port>
+```
+
+Flutter receives the dynamically assigned localhost URL and uses it for all API calls.
+
+Each device therefore has an independent local server and download directory.
+
+## 🎵 Download Pipeline
+
+```text
+YouTube URL
+    ↓
+yt-dlp
+    ↓
+Best available audio source
+    ↓
+Android-native FFmpeg
+    ↓
+MP3 320 kbps
+    ↓
+Local app storage
+    ↓
+Flutter music player
+```
+
+The MP3 bitrate does not increase the quality of the original YouTube source; it only controls the output MP3 encoding bitrate.
+
+## 🌐 Local API
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/health` | Server health check status |
-| `POST` | `/api/audio/info` | Fetch YouTube video metadata (title, thumbnail, duration, artist) |
-| `POST` | `/api/audio/download` | Queue a background download job |
-| `GET` | `/api/audio/progress/<job_id>` | Stream job progress (`status`, `progress%`, `speed`, `eta`) |
-| `GET` | `/api/audio/file/<job_id>` | Stream completed 320kbps MP3 audio file |
-| `DELETE` | `/api/audio/job/<job_id>` | Delete temporary server files after download |
+| `GET` | `/api/health` | Local server health check |
+| `POST` | `/api/audio/info` | Fetch YouTube metadata |
+| `POST` | `/api/audio/download` | Start a background download job |
+| `GET` | `/api/audio/progress/<job_id>` | Get download/processing progress |
+| `GET` | `/api/audio/file/<job_id>` | Return the completed MP3 file |
+| `DELETE` | `/api/audio/job/<job_id>` | Remove a completed local job/file |
 
----
-
-## ☁️ Cloud Deployment (Render.com)
-
-1. Push your repository to **GitHub**.
-2. Log in to **[Render.com](https://dashboard.render.com)**.
-3. Click **New +** $\rightarrow$ **Web Service** and connect your GitHub repository.
-4. Render will auto-detect `render.yaml` with:
-   - **Root Directory**: `backend`
-   - **Build Command**: `./build.sh`
-   - **Start Command**: `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120`
-5. Click **Create Web Service**.
-6. Copy your live backend URL (e.g. `https://song-downloader-backend.onrender.com`) and paste it into the **Settings** tab of the Song Downloader mobile app!
-
----
+The server binds to `127.0.0.1` only.
 
 ## 🛠️ Technology Stack
 
-- **Mobile App**: Flutter (Dart), Just Audio, Path Provider, Dio, Shared Preferences.
-- **Backend API**: Python 3.11, Flask, Flask-CORS, Gunicorn WSGI.
-- **Audio Extraction**: `yt-dlp` & `FFmpeg`.
+- **Mobile App**: Flutter / Dart
+- **Android integration**: Kotlin
+- **Embedded Python**: Chaquopy + Python 3.11
+- **Local API**: Flask
+- **Audio extraction**: yt-dlp
+- **Audio conversion**: Android-native FFmpeg
+- **Networking**: Dio
+- **Storage**: Path Provider
+- **Playback**: Audio player
+
+## ⚠️ Personal Use
+
+This project is intended for personal use. Make sure you have the necessary rights or permissions for any media you download and comply with the terms applicable to the source service and the content.
