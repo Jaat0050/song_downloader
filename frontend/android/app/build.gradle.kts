@@ -26,8 +26,6 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // Chaquopy requires explicit ABI selection. The app targets modern
-        // ARM64 Android devices and keeps the embedded Python runtime small.
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -36,13 +34,18 @@ android {
     buildTypes {
         release { signingConfig = signingConfigs.getByName("debug") }
     }
+
+    // FFmpegKit is used as an Android-native audio transcoder. The maintained
+    // artifact keeps the original com.arthenica.ffmpegkit API while providing
+    // current Android/ARM64 binaries. The audio package includes MP3 support.
+    dependencies {
+        implementation("dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7")
+    }
 }
 
 chaquopy {
     defaultConfig {
         version = "3.11"
-        // Use the exact Homebrew Python 3.11 executable instead of relying on
-        // Gradle's PATH. This machine has Python 3.11.16 at this location.
         buildPython("/opt/homebrew/bin/python3.11")
         pip {
             install("Flask==3.1.0")
