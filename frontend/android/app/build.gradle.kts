@@ -35,10 +35,10 @@ android {
         release { signingConfig = signingConfigs.getByName("debug") }
     }
 
-    // FFmpegKit is used as an Android-native audio transcoder. The maintained
-    // artifact keeps the original com.arthenica.ffmpegkit API while providing
-    // current Android/ARM64 binaries. The audio package includes MP3 support.
     dependencies {
+        // Android-native FFmpeg library used by AudioTranscoder.kt. This keeps
+        // FFmpeg out of the Python runtime and makes MP3 conversion available
+        // directly on the device.
         implementation("dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7")
     }
 }
