@@ -25,6 +25,12 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Chaquopy requires explicit ABI selection. The app targets modern
+        // ARM64 Android devices and keeps the embedded Python runtime small.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildTypes {
