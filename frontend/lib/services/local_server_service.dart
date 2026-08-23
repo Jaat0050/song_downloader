@@ -34,4 +34,9 @@ class LocalServerService {
       _baseUrl = null;
     }
   }
+
+  Future<String> restart() async {
+    await stop();
+    return start();
+  }
 }
