@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/settings_screen.dart';
-import 'services/download_storage.dart';
 import 'services/downloader_api.dart';
 import 'services/local_server_service.dart';
 
@@ -19,7 +18,6 @@ class SongDownloaderApp extends StatefulWidget {
 }
 
 class _SongDownloaderAppState extends State<SongDownloaderApp> {
-  final DownloadStorageService _storageService = DownloadStorageService();
   final LocalServerService _localServer = LocalServerService();
   late DownloaderApiService _apiService;
   String? _startupError;
@@ -35,10 +33,7 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
     try {
       final backendUrl = await _localServer.start();
       _apiService = DownloaderApiService(baseUrl: backendUrl);
-
-      // Verify the local server before displaying the main UI.
       await _apiService.checkHealth();
-
       if (mounted) {
         setState(() {
           _initialized = true;
@@ -71,10 +66,7 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
       ),
       home: _initialized
           ? MainShell(apiService: _apiService)
-          : _StartupScreen(
-              error: _startupError,
-              onRetry: _initApp,
-            ),
+          : _StartupScreen(error: _startupError, onRetry: _initApp),
     );
   }
 }
