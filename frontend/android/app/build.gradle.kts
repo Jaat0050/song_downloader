@@ -41,10 +41,9 @@ android {
 chaquopy {
     defaultConfig {
         version = "3.11"
-        // Chaquopy must build Python 3.11 packages with a Python 3.11 host
-        // interpreter. Do not use the macOS `python3` alias, which may point
-        // to Python 3.14 on the developer machine.
-        buildPython("python3.11")
+        // Use the exact Homebrew Python 3.11 executable instead of relying on
+        // Gradle's PATH. This machine has Python 3.11.16 at this location.
+        buildPython("/opt/homebrew/bin/python3.11")
         pip {
             install("Flask==3.1.0")
             install("yt-dlp[default]==2026.08.19")
