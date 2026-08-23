@@ -50,6 +50,19 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
     }
   }
 
+  Future<void> _restartServer() async {
+    final backendUrl = await _localServer.restart();
+    final api = DownloaderApiService(baseUrl: backendUrl);
+    await api.checkHealth();
+    if (mounted) {
+      setState(() {
+        _apiService = api;
+        _startupError = null;
+        _initialized = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -58,14 +71,11 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0B0B0F),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B5CF6),
-          brightness: Brightness.dark,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5CF6), brightness: Brightness.dark),
         useMaterial3: true,
       ),
       home: _initialized
-          ? MainShell(apiService: _apiService)
+          ? MainShell(apiService: _apiService, onRestartServer: _restartServer)
           : _StartupScreen(error: _startupError, onRetry: _initApp),
     );
   }
@@ -89,24 +99,12 @@ class _StartupScreen extends StatelessWidget {
             children: [
               const Icon(Icons.dns_rounded, size: 64, color: Color(0xFF8B5CF6)),
               const SizedBox(height: 20),
-              Text(
-                hasError ? 'Local server failed to start' : 'Starting local server…',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-              ),
+              Text(hasError ? 'Local server failed to start' : 'Starting local server…', textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
-              Text(
-                hasError ? error! : 'Preparing the private downloader on this device.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white60, height: 1.4),
-              ),
+              Text(hasError ? error! : 'Preparing the private downloader on this device.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, height: 1.4)),
               if (hasError) ...[
                 const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Retry'),
-                ),
+                FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Retry')),
               ] else ...[
                 const SizedBox(height: 24),
                 const CircularProgressIndicator(),
@@ -121,8 +119,9 @@ class _StartupScreen extends StatelessWidget {
 
 class MainShell extends StatefulWidget {
   final DownloaderApiService apiService;
+  final Future<void> Function() onRestartServer;
 
-  const MainShell({super.key, required this.apiService});
+  const MainShell({super.key, required this.apiService, required this.onRestartServer});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -136,7 +135,7 @@ class _MainShellState extends State<MainShell> {
     final pages = [
       HomeScreen(apiService: widget.apiService),
       const LibraryScreen(),
-      SettingsScreen(apiService: widget.apiService),
+      SettingsScreen(apiService: widget.apiService, onRestartServer: widget.onRestartServer),
     ];
 
     return Scaffold(
