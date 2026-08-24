@@ -6,7 +6,11 @@ import 'preview_screen.dart';
 class HomeScreen extends StatefulWidget {
   final DownloaderApiService apiService;
   final DownloadManagerService downloadManager;
-  const HomeScreen({super.key, required this.apiService, required this.downloadManager});
+  final String? sharedUrl;
+  final VoidCallback onSharedUrlConsumed;
+  final VoidCallback onOpenLibrary;
+
+  const HomeScreen({super.key, required this.apiService, required this.downloadManager, this.sharedUrl, required this.onSharedUrlConsumed, required this.onOpenLibrary});
   @override State<HomeScreen> createState() => _HomeScreenState();
 }
 
@@ -14,6 +18,30 @@ class _HomeScreenState extends State<HomeScreen> {
   final _urlController = TextEditingController();
   bool _loading = false;
   String? _errorMessage;
+  String? _lastHandledSharedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleSharedUrl());
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.sharedUrl != oldWidget.sharedUrl) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleSharedUrl());
+    }
+  }
+
+  void _handleSharedUrl() {
+    final sharedUrl = widget.sharedUrl;
+    if (!mounted || sharedUrl == null || sharedUrl.isEmpty || sharedUrl == _lastHandledSharedUrl) return;
+    _lastHandledSharedUrl = sharedUrl;
+    _urlController.text = sharedUrl;
+    _fetchSong(sharedUrl: sharedUrl);
+    widget.onSharedUrlConsumed();
+  }
 
   bool _isSupportedUrl(String value) {
     final uri = Uri.tryParse(value.trim());
@@ -22,15 +50,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return host == 'youtube.com' || host == 'www.youtube.com' || host == 'm.youtube.com' || host == 'youtu.be' || host == 'www.youtube-nocookie.com';
   }
 
-  Future<void> _fetchSong() async {
+  Future<void> _fetchSong({String? sharedUrl}) async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final url = _urlController.text.trim();
-    if (!_isSupportedUrl(url)) { setState(() => _errorMessage = 'Please enter a valid YouTube video URL.'); return; }
-    setState(() { _loading = true; _errorMessage = null; });
+    final url = (sharedUrl ?? _urlController.text).trim();
+    if (!_isSupportedUrl(url)) { if (mounted) setState(() => _errorMessage = 'Please enter a valid YouTube video URL.'); return; }
+    if (mounted) setState(() { _loading = true; _errorMessage = null; });
     try {
       final songInfo = await widget.apiService.fetchSongInfo(url);
       if (!mounted) return;
-      Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewScreen(songInfo: songInfo, apiService: widget.apiService, downloadManager: widget.downloadManager)));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewScreen(songInfo: songInfo, apiService: widget.apiService, downloadManager: widget.downloadManager, onOpenLibrary: widget.onOpenLibrary)));
     } catch (e) {
       if (mounted) setState(() => _errorMessage = e.toString());
     } finally { if (mounted) setState(() => _loading = false); }
