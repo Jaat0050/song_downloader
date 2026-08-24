@@ -12,8 +12,9 @@ class NowPlayingScreen extends StatelessWidget {
     animation: player,
     builder: (context, _) {
       final song = player.current;
-      if (song == null)
+      if (song == null) {
         return const Scaffold(body: Center(child: Text('Nothing is playing')));
+      }
       final d = player.duration,
           p = player.position,
           max = d.inMilliseconds > 0 ? d.inMilliseconds.toDouble() : 1.0,
@@ -32,25 +33,17 @@ class NowPlayingScreen extends StatelessWidget {
                     aspectRatio: 1,
                     child:
                         song.thumbnail.isEmpty
-                            ? const ColoredBox(
-                              color: NeuTheme.input,
-                              child: Icon(
-                                Icons.music_note_rounded,
-                                size: 90,
-                                color: NeuTheme.accent,
-                              ),
+                            ? Image.asset(
+                              'assets/images/app_icon.png',
+                              fit: BoxFit.cover,
                             )
                             : Image.network(
                               song.thumbnail,
                               fit: BoxFit.cover,
                               errorBuilder:
-                                  (_, __, ___) => const ColoredBox(
-                                    color: NeuTheme.input,
-                                    child: Icon(
-                                      Icons.music_note_rounded,
-                                      size: 90,
-                                      color: NeuTheme.accent,
-                                    ),
+                                  (_, __, ___) => Image.asset(
+                                    'assets/images/app_icon.png',
+                                    fit: BoxFit.cover,
                                   ),
                             ),
                   ),

@@ -49,14 +49,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
     if (matches.isEmpty) return;
     final p = matches.first;
     setState(() => _job = p);
-    if (p.isCompleted) _save(p);
-    if (p.isFailed || p.isCancelled)
+    if (p.isCompleted) {
+      _save(p);
+    }
+    if (p.isFailed || p.isCancelled) {
       setState(
         () =>
             _error =
                 p.error ??
                 (p.isCancelled ? 'Download cancelled.' : 'Download failed.'),
       );
+    }
   }
 
   Future<void> _save(DownloadProgress p) async {
@@ -185,17 +188,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
                           height: 66,
                           child:
                               s.thumbnail.isEmpty
-                                  ? const ColoredBox(
-                                    color: NeuTheme.input,
-                                    child: Icon(Icons.music_note_rounded),
+                                  ? Image.asset(
+                                    'assets/images/app_icon.png',
+                                    fit: BoxFit.cover,
                                   )
                                   : Image.network(
                                     s.thumbnail,
                                     fit: BoxFit.cover,
                                     errorBuilder:
-                                        (_, __, ___) => const ColoredBox(
-                                          color: NeuTheme.input,
-                                          child: Icon(Icons.music_note_rounded),
+                                        (_, __, ___) => Image.asset(
+                                          'assets/images/app_icon.png',
+                                          fit: BoxFit.cover,
                                         ),
                                   ),
                         ),

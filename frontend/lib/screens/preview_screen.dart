@@ -52,11 +52,12 @@ class _PreviewScreenState extends State<PreviewScreen> {
         ),
       );
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = e.toString();
           _starting = false;
         });
+      }
     }
   }
 
@@ -81,17 +82,14 @@ class _PreviewScreenState extends State<PreviewScreen> {
                             s.thumbnail,
                             fit: BoxFit.cover,
                             errorBuilder:
-                                (_, __, ___) => const ColoredBox(
-                                  color: NeuTheme.input,
-                                  child: Icon(
-                                    Icons.music_note_rounded,
-                                    size: 56,
-                                  ),
+                                (_, __, ___) => Image.asset(
+                                  'assets/images/app_icon.png',
+                                  fit: BoxFit.cover,
                                 ),
                           )
-                          : const ColoredBox(
-                            color: NeuTheme.input,
-                            child: Icon(Icons.music_note_rounded, size: 56),
+                          : Image.asset(
+                            'assets/images/app_icon.png',
+                            fit: BoxFit.cover,
                           ),
                 ),
               ),

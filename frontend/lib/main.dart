@@ -72,11 +72,12 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
   }
 
   Future<void> _initApp() async {
-    if (mounted)
+    if (mounted) {
       setState(() {
         _startupError = null;
         _initialized = false;
       });
+    }
     Object? lastError;
     for (var attempt = 1; attempt <= 4; attempt++) {
       try {
@@ -98,17 +99,19 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
         return;
       } catch (e) {
         lastError = e;
-        if (attempt < 4)
+        if (attempt < 4) {
           await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
+        }
       }
     }
-    if (mounted)
+    if (mounted) {
       setState(() {
         _startupError =
             lastError?.toString() ??
             'Unable to start the local downloader server.';
         _initialized = false;
       });
+    }
   }
 
   Future<void> _restartServer() async {
@@ -262,10 +265,14 @@ class _StartupScreen extends StatelessWidget {
               NeuSurface(
                 child: Column(
                   children: [
-                    const Icon(
-                      Icons.graphic_eq_rounded,
-                      size: 64,
-                      color: kNeuAccent,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: Image.asset(
+                        'assets/images/app_icon.png',
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Text(

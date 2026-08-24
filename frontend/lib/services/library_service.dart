@@ -39,12 +39,14 @@ class LibraryService {
     final clean = newName.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     if (clean.isEmpty) throw ArgumentError('Name cannot be empty.');
     final oldFile = File(item.localPath);
-    if (!await oldFile.exists())
+    if (!await oldFile.exists()) {
       throw StateError('Audio file no longer exists.');
+    }
     final dir = oldFile.parent;
     final target = File('${dir.path}/$clean.mp3');
-    if (target.path != oldFile.path && await target.exists())
+    if (target.path != oldFile.path && await target.exists()) {
       throw StateError('A file with this name already exists.');
+    }
     final renamed =
         target.path == oldFile.path
             ? oldFile

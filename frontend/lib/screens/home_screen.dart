@@ -36,14 +36,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.sharedUrl != oldWidget.sharedUrl)
+    if (widget.sharedUrl != oldWidget.sharedUrl) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleSharedUrl());
+    }
   }
 
   void _handleSharedUrl() {
     final u = widget.sharedUrl;
-    if (!mounted || u == null || u.isEmpty || u == _lastHandledSharedUrl)
+    if (!mounted || u == null || u.isEmpty || u == _lastHandledSharedUrl) {
       return;
+    }
     _lastHandledSharedUrl = u;
     _urlController.text = u;
     _fetchSong(sharedUrl: u);
@@ -65,17 +67,19 @@ class _HomeScreenState extends State<HomeScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     final url = (sharedUrl ?? _urlController.text).trim();
     if (!_isSupportedUrl(url)) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _errorMessage = 'Please enter a valid YouTube video URL.',
         );
+      }
       return;
     }
-    if (mounted)
+    if (mounted) {
       setState(() {
         _loading = true;
         _errorMessage = null;
       });
+    }
     try {
       final info = await widget.apiService.fetchSongInfo(url);
       if (!mounted) return;
@@ -110,22 +114,43 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
         children: [
-          const Text(
-            'Song Downloader',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -.5,
-            ),
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            'Private • Fast • On-device',
-            style: TextStyle(
-              color: NeuTheme.muted,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.asset(
+                  'assets/images/app_icon.png',
+                  width: 46,
+                  height: 46,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 13),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Song Downloader',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -.5,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Private • Fast • On-device',
+                      style: TextStyle(
+                        color: NeuTheme.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 22),
           NeuSurface(
@@ -135,16 +160,13 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: NeuTheme.accent.withValues(alpha: .14),
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: const Icon(
-                        Icons.graphic_eq_rounded,
-                        color: NeuTheme.accent,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/app_icon.png',
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(width: 12),

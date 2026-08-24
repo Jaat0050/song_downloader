@@ -42,11 +42,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Future<void> _load() async {
     if (mounted) setState(() => _loading = true);
     final items = await _library.load();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _items = items;
         _loading = false;
       });
+    }
   }
 
   List<HistoryItem> get _visible {
@@ -76,8 +77,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _delete(HistoryItem i) async {
-    if (widget.musicPlayer.current?.id == i.id)
+    if (widget.musicPlayer.current?.id == i.id) {
       await widget.musicPlayer.clearQueue();
+    }
     await _storage.deleteHistoryItem(i.id);
     await _load();
   }
@@ -238,17 +240,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 height: 60,
                 child:
                     item.thumbnail.isEmpty
-                        ? const ColoredBox(
-                          color: NeuTheme.input,
-                          child: Icon(Icons.music_note_rounded),
+                        ? Image.asset(
+                          'assets/images/app_icon.png',
+                          fit: BoxFit.cover,
                         )
                         : Image.network(
                           item.thumbnail,
                           fit: BoxFit.cover,
                           errorBuilder:
-                              (_, __, ___) => const ColoredBox(
-                                color: NeuTheme.input,
-                                child: Icon(Icons.music_note_rounded),
+                              (_, __, ___) => Image.asset(
+                                'assets/images/app_icon.png',
+                                fit: BoxFit.cover,
                               ),
                         ),
               ),
@@ -289,10 +291,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             PopupMenuButton<String>(
               onSelected: (v) {
-                if (v == 'rename') _rename(item);
-                if (v == 'share')
+                if (v == 'rename') {
+                  _rename(item);
+                }
+                if (v == 'share') {
                   Share.shareXFiles([XFile(item.localPath)], text: item.title);
-                if (v == 'delete') _delete(item);
+                }
+                if (v == 'delete') {
+                  _delete(item);
+                }
               },
               itemBuilder:
                   (_) => const [

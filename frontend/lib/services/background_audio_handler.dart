@@ -32,8 +32,9 @@ class BackgroundAudioHandler extends BaseAudioHandler
   );
   void _broadcastState(PlaybackEvent event) {
     final playing = _player.playing;
-    if (_index >= 0 && _index < _items.length)
+    if (_index >= 0 && _index < _items.length) {
       mediaItem.add(_media(_items[_index], _player.duration));
+    }
     playbackState.add(
       playbackState.value.copyWith(
         controls: [
