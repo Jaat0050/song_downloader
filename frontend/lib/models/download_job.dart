@@ -1,6 +1,7 @@
 class DownloadProgress {
   final String jobId;
-  final String status; // queued | extracting | downloading | converting | saving | completed | failed | cancelled
+  final String
+  status; // queued | extracting | downloading | converting | saving | completed | failed | cancelled
   final double progress;
   final String speed;
   final int? eta;

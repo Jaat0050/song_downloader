@@ -27,13 +27,13 @@ class AudioFormat {
   }
 
   Map<String, dynamic> toJson() => {
-        'format_id': formatId,
-        'ext': ext,
-        'codec': codec,
-        'bitrate': bitrate,
-        'sample_rate': sampleRate,
-        'size': size,
-      };
+    'format_id': formatId,
+    'ext': ext,
+    'codec': codec,
+    'bitrate': bitrate,
+    'sample_rate': sampleRate,
+    'size': size,
+  };
 }
 
 class SongInfo {
@@ -62,23 +62,32 @@ class SongInfo {
     return SongInfo(
       id: (json['id'] as String?) ?? '',
       title: (json['title'] as String?) ?? 'Unknown song',
-      artist: (json['artist'] as String?) ?? (json['uploader'] as String?) ?? 'Unknown artist',
+      artist:
+          (json['artist'] as String?) ??
+          (json['uploader'] as String?) ??
+          'Unknown artist',
       uploader: (json['uploader'] as String?) ?? '',
       duration: (json['duration'] as int?) ?? 0,
       thumbnail: (json['thumbnail'] as String?) ?? '',
       webpageUrl: (json['webpage_url'] as String?) ?? '',
-      audioFormats: rawFormats.map((f) => AudioFormat.fromJson(Map<String, dynamic>.from(f as Map))).toList(),
+      audioFormats:
+          rawFormats
+              .map(
+                (f) =>
+                    AudioFormat.fromJson(Map<String, dynamic>.from(f as Map)),
+              )
+              .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'artist': artist,
-        'uploader': uploader,
-        'duration': duration,
-        'thumbnail': thumbnail,
-        'webpage_url': webpageUrl,
-        'audio_formats': audioFormats.map((f) => f.toJson()).toList(),
-      };
+    'id': id,
+    'title': title,
+    'artist': artist,
+    'uploader': uploader,
+    'duration': duration,
+    'thumbnail': thumbnail,
+    'webpage_url': webpageUrl,
+    'audio_formats': audioFormats.map((f) => f.toJson()).toList(),
+  };
 }

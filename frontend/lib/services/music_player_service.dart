@@ -33,13 +33,42 @@ class MusicPlayerService extends ChangeNotifier {
     await handler.playItem(item, queueItems: _queue);
     notifyListeners();
   }
-  Future<void> pause() async { await handler.pause(); notifyListeners(); }
-  Future<void> resume() async { await handler.play(); notifyListeners(); }
+
+  Future<void> pause() async {
+    await handler.pause();
+    notifyListeners();
+  }
+
+  Future<void> resume() async {
+    await handler.play();
+    notifyListeners();
+  }
+
   Future<void> seek(Duration value) => handler.seek(value);
   Future<void> next() => handler.skipToNext();
   Future<void> previous() => handler.skipToPrevious();
-  void setShuffle(bool value) { _shuffle=value; handler.setShuffle(value); notifyListeners(); }
-  void setRepeat(bool value) { _repeat=value; handler.setRepeat(value); notifyListeners(); }
-  Future<void> clearQueue() async { await handler.stop(); _queue=[]; _current=null; notifyListeners(); }
-  @override void dispose() { handler.stop(); super.dispose(); }
+  void setShuffle(bool value) {
+    _shuffle = value;
+    handler.setShuffle(value);
+    notifyListeners();
+  }
+
+  void setRepeat(bool value) {
+    _repeat = value;
+    handler.setRepeat(value);
+    notifyListeners();
+  }
+
+  Future<void> clearQueue() async {
+    await handler.stop();
+    _queue = [];
+    _current = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    handler.stop();
+    super.dispose();
+  }
 }

@@ -17,14 +17,19 @@ class DownloadManagerService extends ChangeNotifier {
     return List.unmodifiable(values);
   }
 
-  List<DownloadProgress> get activeJobs => jobs.where((job) => job.isActive).toList();
-  List<DownloadProgress> get failedJobs => jobs.where((job) => job.isFailed || job.isCancelled).toList();
+  List<DownloadProgress> get activeJobs =>
+      jobs.where((job) => job.isActive).toList();
+  List<DownloadProgress> get failedJobs =>
+      jobs.where((job) => job.isFailed || job.isCancelled).toList();
 
   void start() {
     if (_running) return;
     _running = true;
     _refreshAll();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _refreshAll());
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _refreshAll(),
+    );
   }
 
   Future<String> enqueue(String url) async {

@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 class ShareIntentService {
-  static const MethodChannel _channel = MethodChannel('song_downloader/local_server');
+  static const MethodChannel _channel = MethodChannel(
+    'song_downloader/local_server',
+  );
 
-  final StreamController<String> _sharedTextController = StreamController<String>.broadcast();
+  final StreamController<String> _sharedTextController =
+      StreamController<String>.broadcast();
   bool _initialized = false;
 
   Stream<String> get sharedTextStream => _sharedTextController.stream;

@@ -56,7 +56,9 @@ class ServerHealth {
 
   factory ServerHealth.fromJson(Map<String, dynamic> json) {
     final rawJobs = Map<String, dynamic>.from(json['jobs'] as Map? ?? {});
-    final rawWorkers = Map<String, dynamic>.from(json['worker_pool'] as Map? ?? {});
+    final rawWorkers = Map<String, dynamic>.from(
+      json['worker_pool'] as Map? ?? {},
+    );
 
     return ServerHealth(
       healthy: json['success'] == true && json['status'] == 'ok',
@@ -88,14 +90,14 @@ class DownloaderApiService {
   final String _baseUrl;
 
   DownloaderApiService({required String baseUrl})
-      : _baseUrl = _normalizeBaseUrl(baseUrl),
-        _dio = Dio(
-          BaseOptions(
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 120),
-            sendTimeout: const Duration(seconds: 30),
-          ),
-        );
+    : _baseUrl = _normalizeBaseUrl(baseUrl),
+      _dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 120),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
 
   String get baseUrl => _baseUrl;
 
@@ -260,7 +262,9 @@ class DownloaderApiService {
         onReceiveProgress: onReceiveProgress,
       );
       if (!await tempFile.exists()) {
-        throw DownloaderApiException('The temporary audio file was not created.');
+        throw DownloaderApiException(
+          'The temporary audio file was not created.',
+        );
       }
       if (await destinationFile.exists()) {
         await destinationFile.delete();
@@ -279,7 +283,9 @@ class DownloaderApiService {
           await tempFile.delete();
         }
       } catch (_) {}
-      throw DownloaderApiException('Could not save the audio file: ${e.message}');
+      throw DownloaderApiException(
+        'Could not save the audio file: ${e.message}',
+      );
     }
   }
 

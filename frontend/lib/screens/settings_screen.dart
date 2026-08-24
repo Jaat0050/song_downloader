@@ -112,22 +112,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _clearHistory() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Clear history?'),
-        content: const Text(
-          'This removes library history only. Your MP3 files are kept.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Clear history?'),
+            content: const Text(
+              'This removes library history only. Your MP3 files are kept.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Clear'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
     );
 
     if (ok == true) {
@@ -139,22 +140,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _resetData() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Reset app data?'),
-        content: const Text(
-          'Favorites, playlists and library history will be removed. Downloaded MP3 files will remain.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Reset app data?'),
+            content: const Text(
+              'Favorites, playlists and library history will be removed. Downloaded MP3 files will remain.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Reset'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
     );
 
     if (ok == true) {
@@ -164,9 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _snack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   String _bytes(int bytes) {
@@ -202,12 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _row(
-    String label,
-    String value, {
-    bool good = true,
-    IconData? icon,
-  }) {
+  Widget _row(String label, String value, {bool good = true, IconData? icon}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
@@ -219,10 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white70),
-            ),
+            child: Text(label, style: const TextStyle(color: Colors.white70)),
           ),
           Flexible(
             child: Text(
@@ -269,9 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         height: 12,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: online
-                              ? Colors.greenAccent
-                              : Colors.redAccent,
+                          color: online ? Colors.greenAccent : Colors.redAccent,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -296,23 +286,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     online
                         ? 'Embedded Python server is healthy and responding.'
                         : (_error ?? 'Checking local backend…'),
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      height: 1.4,
-                    ),
+                    style: const TextStyle(color: Colors.white60, height: 1.4),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
                       onPressed: _restarting ? null : _restart,
-                      icon: _restarting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.restart_alt_rounded),
+                      icon:
+                          _restarting
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Icon(Icons.restart_alt_rounded),
                       label: Text(
                         _restarting
                             ? 'Restarting Server…'
@@ -330,10 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   const Text(
                     'Server Health',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   _row(
@@ -349,7 +336,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _row(
                     'Address',
-                    health == null ? '—' : '${health.host}:${health.port ?? '—'}',
+                    health == null
+                        ? '—'
+                        : '${health.host}:${health.port ?? '—'}',
                     icon: Icons.lan_rounded,
                   ),
                   _row(
@@ -390,10 +379,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   const Text(
                     'Download Engine',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   for (final entry in <MapEntry<String, int>>[
@@ -409,7 +395,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _row(
                       entry.key,
                       '${entry.value}',
-                      good: !['Failed', 'Cancelled'].contains(entry.key) ||
+                      good:
+                          !['Failed', 'Cancelled'].contains(entry.key) ||
                           entry.value == 0,
                       icon: Icons.queue_music_rounded,
                     ),
@@ -423,10 +410,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   const Text(
                     'Library & Storage',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   _row(
@@ -465,10 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   const Text(
                     'Maintenance',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   ListTile(
@@ -478,13 +459,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: const Text(
                       'Remove leftover WebM/part audio files',
                     ),
-                    trailing: _actionBusy
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.chevron_right),
+                    trailing:
+                        _actionBusy
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.chevron_right),
                     onTap: _actionBusy ? null : _clearTemp,
                   ),
                   ListTile(
@@ -517,10 +499,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   const Text(
                     'App Status',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   _row(
@@ -548,18 +527,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'Not required',
                     icon: Icons.cloud_off_rounded,
                   ),
-                  _row(
-                    'Audio output',
-                    'MP3',
-                    icon: Icons.music_note_rounded,
-                  ),
+                  _row('Audio output', 'MP3', icon: Icons.music_note_rounded),
                   const SizedBox(height: 8),
                   SelectableText(
                     widget.apiService.baseUrl,
-                    style: const TextStyle(
-                      color: Colors.white38,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ],
               ),

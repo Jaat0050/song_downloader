@@ -21,7 +21,9 @@ class DownloadStorageService {
 
   Future<Directory> getDownloadDirectory() async {
     if (Platform.isAndroid) {
-      final publicDownloadDir = Directory('/storage/emulated/0/Download/Song Downloader');
+      final publicDownloadDir = Directory(
+        '/storage/emulated/0/Download/Song Downloader',
+      );
       try {
         if (!await publicDownloadDir.exists()) {
           await publicDownloadDir.create(recursive: true);
@@ -29,7 +31,9 @@ class DownloadStorageService {
         return publicDownloadDir;
       } catch (_) {}
 
-      final publicMusicDir = Directory('/storage/emulated/0/Music/Song Downloader');
+      final publicMusicDir = Directory(
+        '/storage/emulated/0/Music/Song Downloader',
+      );
       try {
         if (!await publicMusicDir.exists()) {
           await publicMusicDir.create(recursive: true);
@@ -169,7 +173,10 @@ class DownloadStorageService {
 
     await for (final entity in dir.list(followLinks: false)) {
       if (entity is File &&
-          RegExp(r'\.(part|webm|m4a|opus)$', caseSensitive: false).hasMatch(entity.path)) {
+          RegExp(
+            r'\.(part|webm|m4a|opus)$',
+            caseSensitive: false,
+          ).hasMatch(entity.path)) {
         try {
           await entity.delete();
           removed++;

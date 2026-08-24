@@ -8,7 +8,9 @@ class LocalServerException implements Exception {
 }
 
 class LocalServerService {
-  static const MethodChannel _channel = MethodChannel('song_downloader/local_server');
+  static const MethodChannel _channel = MethodChannel(
+    'song_downloader/local_server',
+  );
 
   String? _baseUrl;
 
