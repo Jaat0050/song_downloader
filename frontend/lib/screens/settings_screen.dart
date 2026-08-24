@@ -5,9 +5,476 @@ import '../services/downloader_api.dart';
 import '../services/download_storage.dart';
 import '../theme/neumorphic_widgets.dart';
 
-class SettingsScreen extends StatefulWidget{final DownloaderApiService apiService;final Future<void> Function() onRestartServer;const SettingsScreen({super.key,required this.apiService,required this.onRestartServer});@override State<SettingsScreen> createState()=>_SettingsScreenState();}
-class _SettingsScreenState extends State<SettingsScreen>{final _storage=DownloadStorageService();ServerHealth? _health;String? _error;bool _loading=true,_restarting=false,_busy=false;Timer? _timer;int _songs=0,_bytes=0;@override void initState(){super.initState();_refresh();_timer=Timer.periodic(const Duration(seconds:5),(_)=>_refresh(silent:true));}@override void dispose(){_timer?.cancel();super.dispose();}Future<void> _refresh({bool silent=false})async{if(!silent&&mounted)setState(()=>_loading=true);try{final h=await widget.apiService.fetchHealth();final history=await _storage.loadHistory();final size=await _storage.getLibrarySizeBytes();if(mounted)setState((){_health=h;_songs=history.length;_bytes=size;_error=null;_loading=false;});}catch(e){if(mounted)setState((){_error=e.toString();_loading=false;});}}Future<void> _restart()async{setState(()=>_restarting=true);try{await widget.onRestartServer();await _refresh();_snack('Local server restarted successfully.');}catch(e){_snack('Restart failed: $e');}finally{if(mounted)setState(()=>_restarting=false);}}Future<void> _clearTemp()async{setState(()=>_busy=true);try{final n=await _storage.clearTemporaryFiles();_snack(n==0?'No temporary files found.':'Removed $n temporary file${n==1?'':'s'}.');}finally{if(mounted)setState(()=>_busy=false);}}Future<void> _clearHistory()async{final ok=await _confirm('Clear history?','This removes library history only. Your MP3 files are kept.');if(ok){await _storage.clearHistoryOnly();await _refresh();}}Future<void> _reset()async{final ok=await _confirm('Reset app data?','Favorites, playlists and library history will be removed. Downloaded MP3 files remain.');if(ok){await _storage.resetLocalData();await _refresh();}}Future<bool> _confirm(String title,String body)async=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:Text(title),content:Text(body),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Confirm'))]))??false;void _snack(String t)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t)));String _bytesText(int b){if(b<1024)return'$b B';if(b<1048576)return'${(b/1024).toStringAsFixed(1)} KB';if(b<1073741824)return'${(b/1048576).toStringAsFixed(1)} MB';return'${(b/1073741824).toStringAsFixed(2)} GB';}String _uptime(int s){final d=s~/86400,h=(s%86400)~/3600,m=(s%3600)~/60;return d>0?'${d}d ${h}h ${m}m':h>0?'${h}h ${m}m':'${m}m ${s%60}s';}
-Widget _section(String title,IconData icon,List<Widget> children)=>Padding(padding:const EdgeInsets.only(bottom:14),child:NeuSurface(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:34,height:34,decoration:BoxDecoration(color:NeuTheme.accent.withValues(alpha:.12),borderRadius:BorderRadius.circular(10)),child:Icon(icon,color:NeuTheme.accent,size:19)),const SizedBox(width:10),Text(title,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))]),const SizedBox(height:10),...children])));
-Widget _row(String label,String value,{bool good=true,IconData? icon})=>Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(children:[Icon(icon??(good?Icons.check_circle_rounded:Icons.error_rounded),size:17,color:good?NeuTheme.success:NeuTheme.danger),const SizedBox(width:9),Expanded(child:Text(label,style:const TextStyle(color:NeuTheme.muted,fontSize:13))),Flexible(child:Text(value,textAlign:TextAlign.right,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)))]));
-@override Widget build(BuildContext context){final h=_health;final online=h?.healthy==true&&_error==null;final jobs=h?.jobs??{};return Scaffold(appBar:AppBar(title:const Text('App Settings'),actions:[NeuIconButton(icon:Icons.refresh_rounded,onPressed:_loading?null:_refresh),const SizedBox(width:10)]),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(16,6,16,30),children:[NeuSurface(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:11,height:11,decoration:BoxDecoration(shape:BoxShape.circle,color:online?NeuTheme.success:NeuTheme.danger)),const SizedBox(width:9),Text(online?'Backend Online':'Backend Offline',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const Spacer(),if(_loading)const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2))]),const SizedBox(height:7),Text(online?'Embedded Python server is healthy and responding.':(_error??'Checking local backend…'),style:const TextStyle(color:NeuTheme.muted,fontSize:12,height:1.4)),const SizedBox(height:14),NeuButton(onPressed:_restarting?null:_restart,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[_restarting?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.restart_alt_rounded),const SizedBox(width:8),Text(_restarting?'Restarting Server…':'Restart Local Server')]))]),const SizedBox(height:14),_section('Server Health',Icons.monitor_heart_rounded,[_row('HTTP health',online?'OK':'Failed',good:online,icon:Icons.monitor_heart_rounded),_row('Server',h?.server??'—',icon:Icons.dns_rounded),_row('Address',h==null?'—':'${h.host}:${h.port??'—'}',icon:Icons.lan_rounded),_row('Uptime',h==null?'—':_uptime(h.uptimeSeconds),icon:Icons.timer_outlined),_row('Workers',h==null?'—':'${h.workerCount} • ${h.workerStatus}',good:h?.workerStatus=='ready',icon:Icons.account_tree_rounded),_row('Python',h?.pythonVersion??'—',icon:Icons.code_rounded),_row('yt-dlp',h?.ytDlpVersion??'—',icon:Icons.download_rounded),_row('FFmpeg',h?.ffmpeg??'—',icon:Icons.movie_creation_outlined)]),_section('Download Engine',Icons.queue_music_rounded,[_row('Total','${jobs['total']??0}'),_row('Queued','${jobs['queued']??0}'),_row('Extracting','${jobs['extracting']??0}'),_row('Downloading','${jobs['downloading']??0}'),_row('Processing','${jobs['processing']??0}'),_row('Completed','${jobs['completed']??0}'),_row('Failed','${jobs['failed']??0}',good:(jobs['failed']??0)==0),_row('Cancelled','${jobs['cancelled']??0}',good:(jobs['cancelled']??0)==0)]),_section('Library & Storage',Icons.storage_rounded,[_row('Songs','$_songs',icon:Icons.music_note_rounded),_row('Library size',_bytesText(_bytes),icon:Icons.folder_rounded),_row('Backend storage',h==null?'—':_bytesText(h.storageBytes),icon:Icons.storage_rounded),_row('Free device space',h==null?'—':_bytesText(h.diskFreeBytes),good:(h?.diskFreeBytes??1)>100*1024*1024,icon:Icons.sd_storage_rounded),_row('Total device space',h==null?'—':_bytesText(h.diskTotalBytes),icon:Icons.storage_rounded)]),_section('Maintenance',Icons.build_circle_outlined,[ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.cleaning_services_outlined,color:NeuTheme.muted),title:const Text('Clear temporary files'),subtitle:const Text('Remove leftover temporary audio files',style:TextStyle(color:NeuTheme.subtle)),trailing:_busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.chevron_right),onTap:_busy?null:_clearTemp),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.history_rounded,color:NeuTheme.muted),title:const Text('Clear library history'),subtitle:const Text('Keep MP3 files, remove library records',style:TextStyle(color:NeuTheme.subtle)),trailing:const Icon(Icons.chevron_right),onTap:_clearHistory),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.restart_alt_rounded,color:NeuTheme.muted),title:const Text('Reset local app data'),subtitle:const Text('Remove favorites, playlists and history',style:TextStyle(color:NeuTheme.subtle)),trailing:const Icon(Icons.chevron_right),onTap:_reset)]),_section('App Status',Icons.phone_android_rounded,[_row('Platform',Platform.operatingSystem,icon:Icons.phone_android_rounded),_row('Backend','Embedded / Offline',icon:Icons.phonelink_rounded),_row('Network exposure','127.0.0.1 only',icon:Icons.lock_outline_rounded),_row('External API','Not required',icon:Icons.cloud_off_rounded),_row('Audio output','MP3',icon:Icons.music_note_rounded),const SizedBox(height:6),SelectableText(widget.apiService.baseUrl,style:const TextStyle(color:NeuTheme.subtle,fontSize:11))]),const Text('Health refreshes automatically every 5 seconds.',textAlign:TextAlign.center,style:TextStyle(color:NeuTheme.subtle,fontSize:11))]));}
+class SettingsScreen extends StatefulWidget {
+  final DownloaderApiService apiService;
+  final Future<void> Function() onRestartServer;
+  const SettingsScreen({
+    super.key,
+    required this.apiService,
+    required this.onRestartServer,
+  });
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final _storage = DownloadStorageService();
+  ServerHealth? _health;
+  String? _error;
+  bool _loading = true, _restarting = false, _busy = false;
+  Timer? _timer;
+  int _songs = 0, _bytes = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _refresh(silent: true),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refresh({bool silent = false}) async {
+    if (!silent && mounted) setState(() => _loading = true);
+
+    try {
+      final h = await widget.apiService.fetchHealth();
+      final history = await _storage.loadHistory();
+      final size = await _storage.getLibrarySizeBytes();
+      if (mounted) {
+        setState(() {
+          _health = h;
+          _songs = history.length;
+          _bytes = size;
+          _error = null;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _restart() async {
+    setState(() => _restarting = true);
+    try {
+      await widget.onRestartServer();
+      await _refresh();
+      _snack('Local server restarted successfully.');
+    } catch (e) {
+      _snack('Restart failed: $e');
+    } finally {
+      if (mounted) setState(() => _restarting = false);
+    }
+  }
+
+  Future<void> _clearTemp() async {
+    setState(() => _busy = true);
+    try {
+      final n = await _storage.clearTemporaryFiles();
+      _snack(
+        n == 0
+            ? 'No temporary files found.'
+            : 'Removed $n temporary file${n == 1 ? '' : 's'}.',
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _clearHistory() async {
+    final ok = await _confirm(
+      'Clear history?',
+      'This removes library history only. Your MP3 files are kept.',
+    );
+    if (ok) {
+      await _storage.clearHistoryOnly();
+      await _refresh();
+    }
+  }
+
+  Future<void> _reset() async {
+    final ok = await _confirm(
+      'Reset app data?',
+      'Favorites, playlists and library history will be removed. Downloaded MP3 files remain.',
+    );
+    if (ok) {
+      await _storage.resetLocalData();
+      await _refresh();
+    }
+  }
+
+  Future<bool> _confirm(String title, String body) async {
+    return await showDialog<bool>(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                title: Text(title),
+                content: Text(body),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Confirm'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+  }
+
+  void _snack(String t) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
+
+  String _bytesText(int b) {
+    if (b < 1024) return '$b B';
+    if (b < 1048576) return '${(b / 1024).toStringAsFixed(1)} KB';
+    if (b < 1073741824) return '${(b / 1048576).toStringAsFixed(1)} MB';
+    return '${(b / 1073741824).toStringAsFixed(2)} GB';
+  }
+
+  String _uptime(int s) {
+    final d = s ~/ 86400, h = (s % 86400) ~/ 3600, m = (s % 3600) ~/ 60;
+    return d > 0
+        ? '${d}d ${h}h ${m}m'
+        : h > 0
+        ? '${h}h ${m}m'
+        : '${m}m ${s % 60}s';
+  }
+
+  Widget _section(String title, IconData icon, List<Widget> children) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: NeuSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: NeuTheme.accent.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: NeuTheme.accent, size: 19),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...children,
+            ],
+          ),
+        ),
+      );
+  Widget _row(String label, String value, {bool good = true, IconData? icon}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(
+              icon ?? (good ? Icons.check_circle_rounded : Icons.error_rounded),
+              size: 17,
+              color: good ? NeuTheme.success : NeuTheme.danger,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: NeuTheme.muted, fontSize: 13),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+  @override
+  Widget build(BuildContext context) {
+    final h = _health;
+    final online = h?.healthy == true && _error == null;
+    final jobs = h?.jobs ?? {};
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('App Settings'),
+        actions: [
+          NeuIconButton(
+            icon: Icons.refresh_rounded,
+            onPressed: _loading ? null : _refresh,
+          ),
+          const SizedBox(width: 10),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 30),
+          children: [
+            NeuSurface(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: online ? NeuTheme.success : NeuTheme.danger,
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                      Text(
+                        online ? 'Backend Online' : 'Backend Offline',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_loading)
+                        const SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    online
+                        ? 'Embedded Python server is healthy and responding.'
+                        : (_error ?? 'Checking local backend…'),
+                    style: const TextStyle(
+                      color: NeuTheme.muted,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  NeuButton(
+                    onPressed: _restarting ? null : _restart,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _restarting
+                            ? const SizedBox(
+                              width: 17,
+                              height: 17,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.restart_alt_rounded),
+                        const SizedBox(width: 8),
+                        Text(
+                          _restarting
+                              ? 'Restarting Server…'
+                              : 'Restart Local Server',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _section('Server Health', Icons.monitor_heart_rounded, [
+              _row(
+                'HTTP health',
+                online ? 'OK' : 'Failed',
+                good: online,
+                icon: Icons.monitor_heart_rounded,
+              ),
+              _row('Server', h?.server ?? '—', icon: Icons.dns_rounded),
+              _row(
+                'Address',
+                h == null ? '—' : '${h.host}:${h.port ?? '—'}',
+                icon: Icons.lan_rounded,
+              ),
+              _row(
+                'Uptime',
+                h == null ? '—' : _uptime(h.uptimeSeconds),
+                icon: Icons.timer_outlined,
+              ),
+              _row(
+                'Workers',
+                h == null ? '—' : '${h.workerCount} • ${h.workerStatus}',
+                good: h?.workerStatus == 'ready',
+                icon: Icons.account_tree_rounded,
+              ),
+              _row('Python', h?.pythonVersion ?? '—', icon: Icons.code_rounded),
+              _row(
+                'yt-dlp',
+                h?.ytDlpVersion ?? '—',
+                icon: Icons.download_rounded,
+              ),
+              _row(
+                'FFmpeg',
+                h?.ffmpeg ?? '—',
+                icon: Icons.movie_creation_outlined,
+              ),
+            ]),
+            _section('Download Engine', Icons.queue_music_rounded, [
+              _row('Total', '${jobs['total'] ?? 0}'),
+              _row('Queued', '${jobs['queued'] ?? 0}'),
+              _row('Extracting', '${jobs['extracting'] ?? 0}'),
+              _row('Downloading', '${jobs['downloading'] ?? 0}'),
+              _row('Processing', '${jobs['processing'] ?? 0}'),
+              _row('Completed', '${jobs['completed'] ?? 0}'),
+              _row(
+                'Failed',
+                '${jobs['failed'] ?? 0}',
+                good: (jobs['failed'] ?? 0) == 0,
+              ),
+              _row(
+                'Cancelled',
+                '${jobs['cancelled'] ?? 0}',
+                good: (jobs['cancelled'] ?? 0) == 0,
+              ),
+            ]),
+            _section('Library & Storage', Icons.storage_rounded, [
+              _row('Songs', '$_songs', icon: Icons.music_note_rounded),
+              _row(
+                'Library size',
+                _bytesText(_bytes),
+                icon: Icons.folder_rounded,
+              ),
+              _row(
+                'Backend storage',
+                h == null ? '—' : _bytesText(h.storageBytes),
+                icon: Icons.storage_rounded,
+              ),
+              _row(
+                'Free device space',
+                h == null ? '—' : _bytesText(h.diskFreeBytes),
+                good: (h?.diskFreeBytes ?? 1) > 100 * 1024 * 1024,
+                icon: Icons.sd_storage_rounded,
+              ),
+              _row(
+                'Total device space',
+                h == null ? '—' : _bytesText(h.diskTotalBytes),
+                icon: Icons.storage_rounded,
+              ),
+            ]),
+            _section('Maintenance', Icons.build_circle_outlined, [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.cleaning_services_outlined,
+                  color: NeuTheme.muted,
+                ),
+                title: const Text('Clear temporary files'),
+                subtitle: const Text(
+                  'Remove leftover temporary audio files',
+                  style: TextStyle(color: NeuTheme.subtle),
+                ),
+                trailing:
+                    _busy
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.chevron_right),
+                onTap: _busy ? null : _clearTemp,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.history_rounded,
+                  color: NeuTheme.muted,
+                ),
+                title: const Text('Clear library history'),
+                subtitle: const Text(
+                  'Keep MP3 files, remove library records',
+                  style: TextStyle(color: NeuTheme.subtle),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _clearHistory,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.restart_alt_rounded,
+                  color: NeuTheme.muted,
+                ),
+                title: const Text('Reset local app data'),
+                subtitle: const Text(
+                  'Remove favorites, playlists and history',
+                  style: TextStyle(color: NeuTheme.subtle),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _reset,
+              ),
+            ]),
+            _section('App Status', Icons.phone_android_rounded, [
+              _row(
+                'Platform',
+                Platform.operatingSystem,
+                icon: Icons.phone_android_rounded,
+              ),
+              _row(
+                'Backend',
+                'Embedded / Offline',
+                icon: Icons.phonelink_rounded,
+              ),
+              _row(
+                'Network exposure',
+                '127.0.0.1 only',
+                icon: Icons.lock_outline_rounded,
+              ),
+              _row(
+                'External API',
+                'Not required',
+                icon: Icons.cloud_off_rounded,
+              ),
+              _row('Audio output', 'MP3', icon: Icons.music_note_rounded),
+              const SizedBox(height: 6),
+              SelectableText(
+                widget.apiService.baseUrl,
+                style: const TextStyle(color: NeuTheme.subtle, fontSize: 11),
+              ),
+            ]),
+            const Text(
+              'Health refreshes automatically every 5 seconds.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: NeuTheme.subtle, fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
