@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'screens/home_screen.dart';
@@ -9,6 +10,7 @@ import 'services/download_manager_service.dart';
 import 'services/local_server_service.dart';
 import 'services/music_player_service.dart';
 import 'services/background_audio_handler.dart';
+import 'services/share_intent_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,9 +26,12 @@ class SongDownloaderApp extends StatefulWidget {
 
 class _SongDownloaderAppState extends State<SongDownloaderApp> {
   final LocalServerService _localServer = LocalServerService();
+  final ShareIntentService _shareIntent = ShareIntentService();
   late DownloaderApiService _apiService;
   late final MusicPlayerService _musicPlayer = MusicPlayerService(handler: widget.musicHandler);
   DownloadManagerService? _downloadManager;
+  StreamSubscription<String>? _shareSubscription;
+  String? _pendingSharedUrl;
   String? _startupError;
   bool _initialized = false;
 
@@ -35,16 +40,34 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestNotificationPermission();
+      _initShareHandling();
       _initApp();
     });
+  }
+
+  Future<void> _initShareHandling() async {
+    await _shareIntent.initialize();
+    final initialText = await _shareIntent.getInitialSharedText();
+    _setSharedUrl(initialText);
+    await _shareSubscription?.cancel();
+    _shareSubscription = _shareIntent.sharedTextStream.listen(_setSharedUrl);
+  }
+
+  void _setSharedUrl(String? text) {
+    final url = _shareIntent.extractYouTubeUrl(text);
+    if (url == null) return;
+    if (mounted) setState(() => _pendingSharedUrl = url);
+  }
+
+  void _consumeSharedUrl() {
+    if (!mounted) return;
+    setState(() => _pendingSharedUrl = null);
   }
 
   Future<void> _requestNotificationPermission() async {
     try {
       await Permission.notification.request();
-    } catch (_) {
-      // Notification permission is optional; the app can continue without it.
-    }
+    } catch (_) {}
   }
 
   Future<void> _initApp() async {
@@ -80,13 +103,27 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
     setState(() { _apiService = api; _downloadManager = manager; _startupError = null; _initialized = true; });
   }
 
-  @override void dispose() { _downloadManager?.dispose(); _musicPlayer.dispose(); super.dispose(); }
+  void _openLibrary() {
+    if (!mounted) return;
+    _mainShellKey.currentState?.openLibrary();
+  }
+
+  final GlobalKey<_MainShellState> _mainShellKey = GlobalKey<_MainShellState>();
+
+  @override
+  void dispose() {
+    _shareSubscription?.cancel();
+    _shareIntent.dispose();
+    _downloadManager?.dispose();
+    _musicPlayer.dispose();
+    super.dispose();
+  }
 
   @override Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'Song Downloader',
     theme: ThemeData(brightness: Brightness.dark, scaffoldBackgroundColor: const Color(0xFF0B0B0F), colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5CF6), brightness: Brightness.dark), useMaterial3: true),
-    home: _initialized ? MainShell(apiService: _apiService, downloadManager: _downloadManager!, musicPlayer: _musicPlayer, onRestartServer: _restartServer) : _StartupScreen(error: _startupError, onRetry: _initApp),
+    home: _initialized ? MainShell(key: _mainShellKey, apiService: _apiService, downloadManager: _downloadManager!, musicPlayer: _musicPlayer, onRestartServer: _restartServer, sharedUrl: _pendingSharedUrl, onSharedUrlConsumed: _consumeSharedUrl, onOpenLibrary: _openLibrary) : _StartupScreen(error: _startupError, onRetry: _initApp),
   );
 }
 
@@ -105,14 +142,30 @@ class _StartupScreen extends StatelessWidget {
 }
 
 class MainShell extends StatefulWidget {
-  final DownloaderApiService apiService; final DownloadManagerService downloadManager; final MusicPlayerService musicPlayer; final Future<void> Function() onRestartServer;
-  const MainShell({super.key, required this.apiService, required this.downloadManager, required this.musicPlayer, required this.onRestartServer});
+  final DownloaderApiService apiService;
+  final DownloadManagerService downloadManager;
+  final MusicPlayerService musicPlayer;
+  final Future<void> Function() onRestartServer;
+  final String? sharedUrl;
+  final VoidCallback onSharedUrlConsumed;
+  final VoidCallback onOpenLibrary;
+
+  const MainShell({super.key, required this.apiService, required this.downloadManager, required this.musicPlayer, required this.onRestartServer, this.sharedUrl, required this.onSharedUrlConsumed, required this.onOpenLibrary});
   @override State<MainShell> createState() => _MainShellState();
 }
+
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+
+  void openLibrary() => setState(() => _currentIndex = 1);
+
   @override Widget build(BuildContext context) {
-    final pages = [HomeScreen(apiService: widget.apiService, downloadManager: widget.downloadManager), LibraryScreen(musicPlayer: widget.musicPlayer), DownloadManagerScreen(manager: widget.downloadManager), SettingsScreen(apiService: widget.apiService, onRestartServer: widget.onRestartServer)];
+    final pages = [
+      HomeScreen(apiService: widget.apiService, downloadManager: widget.downloadManager, sharedUrl: widget.sharedUrl, onSharedUrlConsumed: widget.onSharedUrlConsumed, onOpenLibrary: widget.onOpenLibrary),
+      LibraryScreen(musicPlayer: widget.musicPlayer),
+      DownloadManagerScreen(manager: widget.downloadManager),
+      SettingsScreen(apiService: widget.apiService, onRestartServer: widget.onRestartServer),
+    ];
     return Scaffold(body: IndexedStack(index: _currentIndex, children: pages), bottomNavigationBar: NavigationBar(selectedIndex: _currentIndex, onDestinationSelected: (i) => setState(() => _currentIndex = i), destinations: const [NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'), NavigationDestination(icon: Icon(Icons.library_music_outlined), label: 'Library'), NavigationDestination(icon: Icon(Icons.download_outlined), label: 'Downloads'), NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings')]));
   }
 }
