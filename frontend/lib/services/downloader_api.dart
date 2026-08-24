@@ -6,7 +6,9 @@ import '../models/song_info.dart';
 class DownloaderApiException implements Exception {
   final String message;
   final String? code;
+
   DownloaderApiException(this.message, {this.code});
+
   @override
   String toString() => message;
 }
@@ -55,6 +57,7 @@ class ServerHealth {
   factory ServerHealth.fromJson(Map<String, dynamic> json) {
     final rawJobs = Map<String, dynamic>.from(json['jobs'] as Map? ?? {});
     final rawWorkers = Map<String, dynamic>.from(json['worker_pool'] as Map? ?? {});
+
     return ServerHealth(
       healthy: json['success'] == true && json['status'] == 'ok',
       status: json['status']?.toString() ?? 'unknown',
@@ -71,7 +74,9 @@ class ServerHealth {
       diskFreeBytes: (json['disk_free_bytes'] as num?)?.toInt() ?? 0,
       diskTotalBytes: (json['disk_total_bytes'] as num?)?.toInt() ?? 0,
       storageReady: json['storage_ready'] != false,
-      jobs: rawJobs.map((key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0)),
+      jobs: rawJobs.map(
+        (key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0),
+      ),
       workerCount: (rawWorkers['max_workers'] as num?)?.toInt() ?? 0,
       workerStatus: rawWorkers['status']?.toString() ?? 'unknown',
     );
@@ -80,29 +85,39 @@ class ServerHealth {
 
 class DownloaderApiService {
   final Dio _dio;
-  String _baseUrl;
+  final String _baseUrl;
 
   DownloaderApiService({required String baseUrl})
       : _baseUrl = _normalizeBaseUrl(baseUrl),
-        _dio = Dio(BaseOptions(
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 120),
-          sendTimeout: const Duration(seconds: 30),
-        ));
+        _dio = Dio(
+          BaseOptions(
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 120),
+            sendTimeout: const Duration(seconds: 30),
+          ),
+        );
 
   String get baseUrl => _baseUrl;
+
   static String _normalizeBaseUrl(String value) {
     var text = value.trim();
-    while (text.endsWith('/')) text = text.substring(0, text.length - 1);
+    while (text.endsWith('/')) {
+      text = text.substring(0, text.length - 1);
+    }
     return text;
   }
+
   String _endpoint(String path) => '$_baseUrl$path';
 
   Future<ServerHealth> fetchHealth() async {
     try {
       final response = await _dio.get(_endpoint('/api/health'));
-      final health = ServerHealth.fromJson(Map<String, dynamic>.from(response.data as Map));
-      if (!health.healthy) throw DownloaderApiException('Local downloader server is not ready.');
+      final health = ServerHealth.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+      if (!health.healthy) {
+        throw DownloaderApiException('Local downloader server is not ready.');
+      }
       return health;
     } on DioException catch (e) {
       throw DownloaderApiException(_extractDioError(e));
@@ -113,10 +128,15 @@ class DownloaderApiService {
 
   Future<SongInfo> fetchSongInfo(String url) async {
     try {
-      final response = await _dio.post(_endpoint('/api/audio/info'), data: {'url': url.trim()});
+      final response = await _dio.post(
+        _endpoint('/api/audio/info'),
+        data: {'url': url.trim()},
+      );
       final data = Map<String, dynamic>.from(response.data as Map);
       if (data['success'] == true && data['data'] != null) {
-        return SongInfo.fromJson(Map<String, dynamic>.from(data['data'] as Map));
+        return SongInfo.fromJson(
+          Map<String, dynamic>.from(data['data'] as Map),
+        );
       }
       final error = data['error'] as Map<String, dynamic>?;
       throw DownloaderApiException(
@@ -130,9 +150,14 @@ class DownloaderApiService {
 
   Future<String> startDownload(String url) async {
     try {
-      final response = await _dio.post(_endpoint('/api/audio/download'), data: {'url': url.trim()});
+      final response = await _dio.post(
+        _endpoint('/api/audio/download'),
+        data: {'url': url.trim()},
+      );
       final data = Map<String, dynamic>.from(response.data as Map);
-      if (data['success'] == true && data['job_id'] != null) return data['job_id'].toString();
+      if (data['success'] == true && data['job_id'] != null) {
+        return data['job_id'].toString();
+      }
       final error = data['error'] as Map<String, dynamic>?;
       throw DownloaderApiException(
         error?['message']?.toString() ?? 'Failed to start download job',
@@ -148,7 +173,9 @@ class DownloaderApiService {
       final response = await _dio.get(_endpoint('/api/audio/progress/$jobId'));
       final data = Map<String, dynamic>.from(response.data as Map);
       if (data['success'] == true && data['data'] != null) {
-        return DownloadProgress.fromJson(Map<String, dynamic>.from(data['data'] as Map));
+        return DownloadProgress.fromJson(
+          Map<String, dynamic>.from(data['data'] as Map),
+        );
       }
       final error = data['error'] as Map<String, dynamic>?;
       throw DownloaderApiException(
@@ -164,9 +191,17 @@ class DownloaderApiService {
     try {
       final response = await _dio.get(_endpoint('/api/audio/jobs'));
       final data = Map<String, dynamic>.from(response.data as Map);
-      if (data['success'] != true) throw DownloaderApiException('Failed to load download jobs.');
+      if (data['success'] != true) {
+        throw DownloaderApiException('Failed to load download jobs.');
+      }
       final items = (data['data'] as List? ?? const []);
-      return items.map((item) => DownloadProgress.fromJson(Map<String, dynamic>.from(item as Map))).toList();
+      return items
+          .map(
+            (item) => DownloadProgress.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList();
     } on DioException catch (e) {
       throw DownloaderApiException(_extractDioError(e));
     }
@@ -178,7 +213,9 @@ class DownloaderApiService {
       final data = Map<String, dynamic>.from(response.data as Map);
       if (data['success'] != true) {
         final error = data['error'] as Map<String, dynamic>?;
-        throw DownloaderApiException(error?['message']?.toString() ?? 'Unable to cancel download.');
+        throw DownloaderApiException(
+          error?['message']?.toString() ?? 'Unable to cancel download.',
+        );
       }
     } on DioException catch (e) {
       throw DownloaderApiException(_extractDioError(e));
@@ -190,10 +227,14 @@ class DownloaderApiService {
       final response = await _dio.post(_endpoint('/api/audio/retry/$jobId'));
       final data = Map<String, dynamic>.from(response.data as Map);
       if (data['success'] == true && data['data'] != null) {
-        return DownloadProgress.fromJson(Map<String, dynamic>.from(data['data'] as Map));
+        return DownloadProgress.fromJson(
+          Map<String, dynamic>.from(data['data'] as Map),
+        );
       }
       final error = data['error'] as Map<String, dynamic>?;
-      throw DownloaderApiException(error?['message']?.toString() ?? 'Unable to retry download.');
+      throw DownloaderApiException(
+        error?['message']?.toString() ?? 'Unable to retry download.',
+      );
     } on DioException catch (e) {
       throw DownloaderApiException(_extractDioError(e));
     }
@@ -207,22 +248,37 @@ class DownloaderApiService {
     final tempPath = '$savePath.part';
     final tempFile = File(tempPath);
     final destinationFile = File(savePath);
+
     try {
-      if (await tempFile.exists()) await tempFile.delete();
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
       await _dio.download(
         _endpoint('/api/audio/file/$jobId'),
         tempPath,
         deleteOnError: true,
         onReceiveProgress: onReceiveProgress,
       );
-      if (!await tempFile.exists()) throw DownloaderApiException('The temporary audio file was not created.');
-      if (await destinationFile.exists()) await destinationFile.delete();
+      if (!await tempFile.exists()) {
+        throw DownloaderApiException('The temporary audio file was not created.');
+      }
+      if (await destinationFile.exists()) {
+        await destinationFile.delete();
+      }
       await tempFile.rename(savePath);
     } on DioException catch (e) {
-      try { if (await tempFile.exists()) await tempFile.delete(); } catch (_) {}
+      try {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } catch (_) {}
       throw DownloaderApiException(_extractDioError(e));
     } on FileSystemException catch (e) {
-      try { if (await tempFile.exists()) await tempFile.delete(); } catch (_) {}
+      try {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } catch (_) {}
       throw DownloaderApiException('Could not save the audio file: ${e.message}');
     }
   }
@@ -237,12 +293,23 @@ class DownloaderApiService {
     if (e.response?.data is Map) {
       final data = e.response!.data as Map;
       final error = data['error'] as Map?;
-      if (error?['message'] != null) return error!['message'].toString();
+      if (error?['message'] != null) {
+        return error!['message'].toString();
+      }
     }
-    if (e.response?.statusCode == 507) return 'Not enough free device storage. Please free some space and try again.';
-    if (e.response?.statusCode == 429) return 'Too many downloads are queued. Please wait for one to finish.';
-    if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) return 'Local downloader server timed out.';
-    if (e.type == DioExceptionType.connectionError) return 'Could not connect to the local downloader server.';
+    if (e.response?.statusCode == 507) {
+      return 'Not enough free device storage. Please free some space and try again.';
+    }
+    if (e.response?.statusCode == 429) {
+      return 'Too many downloads are queued. Please wait for one to finish.';
+    }
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Local downloader server timed out.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Could not connect to the local downloader server.';
+    }
     return e.message ?? 'Network error occurred';
   }
 }
