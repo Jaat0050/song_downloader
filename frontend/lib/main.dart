@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/download_manager_screen.dart';
 import 'services/downloader_api.dart';
+import 'services/download_manager_service.dart';
 import 'services/local_server_service.dart';
 
 void main() {
@@ -20,6 +22,7 @@ class SongDownloaderApp extends StatefulWidget {
 class _SongDownloaderAppState extends State<SongDownloaderApp> {
   final LocalServerService _localServer = LocalServerService();
   late DownloaderApiService _apiService;
+  DownloadManagerService? _downloadManager;
   String? _startupError;
   bool _initialized = false;
 
@@ -30,50 +33,47 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
   }
 
   Future<void> _initApp() async {
-    setState(() {
-      _startupError = null;
-      _initialized = false;
-    });
-
+    if (mounted) setState(() { _startupError = null; _initialized = false; });
     Object? lastError;
     for (var attempt = 1; attempt <= 4; attempt++) {
       try {
         final backendUrl = await _localServer.start();
         final api = DownloaderApiService(baseUrl: backendUrl);
         await api.checkHealth();
+        final manager = DownloadManagerService(apiService: api);
+        manager.start();
         if (!mounted) return;
+        _downloadManager?.dispose();
         setState(() {
           _apiService = api;
+          _downloadManager = manager;
           _initialized = true;
           _startupError = null;
         });
         return;
       } catch (e) {
         lastError = e;
-        if (attempt < 4) {
-          await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
-        }
+        if (attempt < 4) await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
       }
     }
-
-    if (mounted) {
-      setState(() {
-        _startupError = lastError?.toString() ?? 'Unable to start the local downloader server.';
-        _initialized = false;
-      });
-    }
+    if (mounted) setState(() { _startupError = lastError?.toString() ?? 'Unable to start the local downloader server.'; _initialized = false; });
   }
 
   Future<void> _restartServer() async {
     final backendUrl = await _localServer.restart();
     final api = DownloaderApiService(baseUrl: backendUrl);
     await api.checkHealth();
-    if (!mounted) return;
-    setState(() {
-      _apiService = api;
-      _startupError = null;
-      _initialized = true;
-    });
+    final manager = DownloadManagerService(apiService: api);
+    manager.start();
+    if (!mounted) { manager.dispose(); return; }
+    _downloadManager?.dispose();
+    setState(() { _apiService = api; _downloadManager = manager; _startupError = null; _initialized = true; });
+  }
+
+  @override
+  void dispose() {
+    _downloadManager?.dispose();
+    super.dispose();
   }
 
   @override
@@ -88,7 +88,7 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
         useMaterial3: true,
       ),
       home: _initialized
-          ? MainShell(apiService: _apiService, onRestartServer: _restartServer)
+          ? MainShell(apiService: _apiService, downloadManager: _downloadManager!, onRestartServer: _restartServer)
           : _StartupScreen(error: _startupError, onRetry: _initApp),
     );
   }
@@ -98,53 +98,37 @@ class _StartupScreen extends StatelessWidget {
   final String? error;
   final VoidCallback onRetry;
   const _StartupScreen({this.error, required this.onRetry});
-
   @override
   Widget build(BuildContext context) {
     final hasError = error != null;
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.dns_rounded, size: 64, color: Color(0xFF8B5CF6)),
-              const SizedBox(height: 20),
-              Text(hasError ? 'Local server failed to start' : 'Starting local server…', textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              Text(hasError ? error! : 'Preparing the private downloader on this device.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, height: 1.4)),
-              if (hasError) ...[
-                const SizedBox(height: 20),
-                FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Retry')),
-              ] else ...[
-                const SizedBox(height: 24),
-                const CircularProgressIndicator(),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+    return Scaffold(body: Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      const Icon(Icons.dns_rounded, size: 64, color: Color(0xFF8B5CF6)),
+      const SizedBox(height: 20),
+      Text(hasError ? 'Local server failed to start' : 'Starting local server…', textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 12),
+      Text(hasError ? error! : 'Preparing the private downloader on this device.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, height: 1.4)),
+      if (hasError) ...[const SizedBox(height: 20), FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Retry'))] else ...[const SizedBox(height: 24), const CircularProgressIndicator()],
+    ]))));
   }
 }
 
 class MainShell extends StatefulWidget {
   final DownloaderApiService apiService;
+  final DownloadManagerService downloadManager;
   final Future<void> Function() onRestartServer;
-  const MainShell({super.key, required this.apiService, required this.onRestartServer});
+  const MainShell({super.key, required this.apiService, required this.downloadManager, required this.onRestartServer});
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeScreen(apiService: widget.apiService),
+      HomeScreen(apiService: widget.apiService, downloadManager: widget.downloadManager),
       const LibraryScreen(),
+      DownloadManagerScreen(manager: widget.downloadManager),
       SettingsScreen(apiService: widget.apiService, onRestartServer: widget.onRestartServer),
     ];
     return Scaffold(
@@ -157,6 +141,7 @@ class _MainShellState extends State<MainShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF8B5CF6)), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.library_music_outlined), selectedIcon: Icon(Icons.library_music_rounded, color: Color(0xFF8B5CF6)), label: 'Library'),
+          NavigationDestination(icon: Icon(Icons.download_outlined), selectedIcon: Icon(Icons.download_rounded, color: Color(0xFF8B5CF6)), label: 'Downloads'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded, color: Color(0xFF8B5CF6)), label: 'Settings'),
         ],
       ),
