@@ -1,13 +1,13 @@
 package com.example.song_downloder
 
+import com.ryanheise.audioservice.AudioServiceActivity
 import android.os.Bundle
-import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     private val channelName = "song_downloader/local_server"
     private var serverUrl: String? = null
     private var pythonStarted = false
