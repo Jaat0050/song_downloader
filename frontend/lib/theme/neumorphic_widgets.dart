@@ -7,6 +7,21 @@ const kNeuSurfaceLight = Color(0xFF303B4C);
 const kNeuAccent = Color(0xFFFF6B5F);
 const kNeuAccentSoft = Color(0xFFFF8277);
 
+/// Shared design tokens used by the redesigned screens.
+/// Keeping these in the same theme file prevents screens from depending on
+/// undefined local colors/classes.
+class NeuTheme {
+  static const background = kNeuBackground;
+  static const surface = kNeuSurface;
+  static const input = kNeuSurfaceDeep;
+  static const accent = kNeuAccent;
+  static const accentSoft = kNeuAccentSoft;
+  static const muted = Color(0xFFB8C1CF);
+  static const subtle = Color(0xFF7F8A9B);
+  static const success = Color(0xFF69D39A);
+  static const danger = Color(0xFFFF6B6B);
+}
+
 class NeuSurface extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
