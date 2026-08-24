@@ -41,6 +41,32 @@ class DownloadStorageService {
   Future<void> toggleFavorite(String id) async { final current=await loadHistory(); final i=current.indexWhere((x)=>x.id==id); if(i>=0){current[i]=current[i].copyWith(favorite:!current[i].favorite);await saveHistory(current);} }
   Future<void> deleteHistoryItem(String id) async { final current=await loadHistory(); final i=current.indexWhere((x)=>x.id==id); if(i<0)return; final target=current[i]; final file=File(target.localPath); if(await file.exists()){try{await file.delete();}catch(_){}} current.removeAt(i); await saveHistory(current); final playlists=await loadPlaylists(); for(final songs in playlists.values)songs.remove(id); await savePlaylists(playlists); }
 
+  Future<List<File>> listAudioFiles() async {
+    final dir = await getDownloadDirectory();
+    if (!await dir.exists()) return [];
+    final files = <File>[];
+    await for (final entity in dir.list(followLinks: false)) {
+      if (entity is File && entity.path.toLowerCase().endsWith('.mp3')) files.add(entity);
+    }
+    files.sort((a,b)=>a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+    return files;
+  }
+
+  Future<int> getLibrarySizeBytes() async { var total=0; for(final file in await listAudioFiles()){try{total+=await file.length();}catch(_){}} return total; }
+
+  Future<int> clearTemporaryFiles() async {
+    final dir=await getDownloadDirectory(); var removed=0;
+    if(!await dir.exists())return 0;
+    await for(final entity in dir.list(followLinks:false)){
+      if(entity is File && RegExp(r'\.(part|webm|m4a|opus)$',caseSensitive:false).hasMatch(entity.path)){
+        try{await entity.delete();removed++;}catch(_){}}
+    }
+    return removed;
+  }
+
+  Future<void> clearHistoryOnly() async { await saveHistory([]); }
+  Future<void> resetLocalData() async { final prefs=await SharedPreferences.getInstance(); await prefs.remove(_historyKey); await prefs.remove(_playlistsKey); }
+
   Future<Map<String,List<String>>> loadPlaylists() async {
     final prefs=await SharedPreferences.getInstance(); final raw=prefs.getString(_playlistsKey); if(raw==null||raw.isEmpty)return {};
     try { final decoded=jsonDecode(raw); if(decoded is! Map)return {}; return decoded.map<String,List<String>>((k,v)=>MapEntry(k.toString(),List<String>.from(v as List))); } catch(_){return {};}
