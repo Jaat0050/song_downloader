@@ -13,7 +13,8 @@ class ProgressScreen extends StatefulWidget {
   final SongInfo songInfo;
   final DownloaderApiService apiService;
   final DownloadManagerService downloadManager;
-  const ProgressScreen({super.key, required this.jobId, required this.songInfo, required this.apiService, required this.downloadManager});
+  final VoidCallback onOpenLibrary;
+  const ProgressScreen({super.key, required this.jobId, required this.songInfo, required this.apiService, required this.downloadManager, required this.onOpenLibrary});
   @override State<ProgressScreen> createState() => _ProgressScreenState();
 }
 
@@ -78,6 +79,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
     try { setState(() { _errorMessage = null; _savingStarted = false; }); await widget.downloadManager.retry(widget.jobId); } catch (e) { if (mounted) setState(() => _errorMessage = e.toString()); }
   }
 
+  void _goToLibrary() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    widget.onOpenLibrary();
+  }
+
   @override void dispose() { widget.downloadManager.removeListener(_onManagerChanged); _filePollTimer?.cancel(); super.dispose(); }
 
   String _statusText(DownloadProgress job) {
@@ -108,7 +114,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           if (isDone) ...[
             const Row(children: [Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 28), SizedBox(width: 10), Text('Download Complete!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
             const SizedBox(height: 8), Text('Saved to: $_savedLocalPath', style: const TextStyle(color: Colors.white60, fontSize: 12)), const SizedBox(height: 20),
-            FilledButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.library_music_rounded), label: const Text('Back to Home'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50))),
+            FilledButton.icon(onPressed: _goToLibrary, icon: const Icon(Icons.library_music_rounded), label: const Text('Go to Library'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50))),
           ] else if (failed) ...[
             Row(children: [Icon(job.isCancelled ? Icons.cancel_outlined : Icons.error_outline_rounded, color: Colors.redAccent, size: 28), const SizedBox(width: 10), Expanded(child: Text(_errorMessage ?? 'Download failed.', style: const TextStyle(color: Colors.redAccent, fontSize: 14)))]),
             const SizedBox(height: 18),
