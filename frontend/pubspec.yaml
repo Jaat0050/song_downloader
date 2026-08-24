@@ -13,7 +13,6 @@ dependencies:
   dio: ^5.7.0
   path_provider: ^2.1.4
   shared_preferences: ^2.3.2
-  audioplayers: ^6.1.0
   just_audio: ^0.10.4
   audio_service: ^0.18.18
   audio_session: ^0.2.2
