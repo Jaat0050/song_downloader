@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -21,9 +22,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<HistoryItem> _items = [];
   bool _loading = true;
   bool _favoritesOnly = false;
+  StreamSubscription<void>? _historySubscription;
 
   @override
-  void initState() { super.initState(); _load(); _search.addListener(_searchChanged); }
+  void initState() {
+    super.initState();
+    _load();
+    _search.addListener(_searchChanged);
+    _historySubscription = DownloadStorageService.historyChanges.listen((_) {
+      if (mounted) _load();
+    });
+  }
+
   void _searchChanged() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
@@ -77,7 +87,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _size(int bytes) => bytes < 1048576 ? '${(bytes / 1024).toStringAsFixed(1)} KB' : '${(bytes / 1048576).toStringAsFixed(1)} MB';
 
   @override
-  void dispose() { _search.removeListener(_searchChanged); _search.dispose(); super.dispose(); }
+  void dispose() {
+    _historySubscription?.cancel();
+    _search.removeListener(_searchChanged);
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
