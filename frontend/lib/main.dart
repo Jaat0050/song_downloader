@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/library_screen.dart';
@@ -12,7 +13,6 @@ void main() {
 
 class SongDownloaderApp extends StatefulWidget {
   const SongDownloaderApp({super.key});
-
   @override
   State<SongDownloaderApp> createState() => _SongDownloaderAppState();
 }
@@ -30,23 +30,37 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
   }
 
   Future<void> _initApp() async {
-    try {
-      final backendUrl = await _localServer.start();
-      _apiService = DownloaderApiService(baseUrl: backendUrl);
-      await _apiService.checkHealth();
-      if (mounted) {
+    setState(() {
+      _startupError = null;
+      _initialized = false;
+    });
+
+    Object? lastError;
+    for (var attempt = 1; attempt <= 4; attempt++) {
+      try {
+        final backendUrl = await _localServer.start();
+        final api = DownloaderApiService(baseUrl: backendUrl);
+        await api.checkHealth();
+        if (!mounted) return;
         setState(() {
+          _apiService = api;
           _initialized = true;
           _startupError = null;
         });
+        return;
+      } catch (e) {
+        lastError = e;
+        if (attempt < 4) {
+          await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
+        }
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _startupError = e.toString();
-          _initialized = false;
-        });
-      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _startupError = lastError?.toString() ?? 'Unable to start the local downloader server.';
+        _initialized = false;
+      });
     }
   }
 
@@ -54,13 +68,12 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
     final backendUrl = await _localServer.restart();
     final api = DownloaderApiService(baseUrl: backendUrl);
     await api.checkHealth();
-    if (mounted) {
-      setState(() {
-        _apiService = api;
-        _startupError = null;
-        _initialized = true;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _apiService = api;
+      _startupError = null;
+      _initialized = true;
+    });
   }
 
   @override
@@ -84,7 +97,6 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
 class _StartupScreen extends StatelessWidget {
   final String? error;
   final VoidCallback onRetry;
-
   const _StartupScreen({this.error, required this.onRetry});
 
   @override
@@ -120,9 +132,7 @@ class _StartupScreen extends StatelessWidget {
 class MainShell extends StatefulWidget {
   final DownloaderApiService apiService;
   final Future<void> Function() onRestartServer;
-
   const MainShell({super.key, required this.apiService, required this.onRestartServer});
-
   @override
   State<MainShell> createState() => _MainShellState();
 }
@@ -137,7 +147,6 @@ class _MainShellState extends State<MainShell> {
       const LibraryScreen(),
       SettingsScreen(apiService: widget.apiService, onRestartServer: widget.onRestartServer),
     ];
-
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: NavigationBar(
