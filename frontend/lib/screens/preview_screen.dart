@@ -8,7 +8,8 @@ class PreviewScreen extends StatefulWidget {
   final SongInfo songInfo;
   final DownloaderApiService apiService;
   final DownloadManagerService downloadManager;
-  const PreviewScreen({super.key, required this.songInfo, required this.apiService, required this.downloadManager});
+  final VoidCallback onOpenLibrary;
+  const PreviewScreen({super.key, required this.songInfo, required this.apiService, required this.downloadManager, required this.onOpenLibrary});
   @override State<PreviewScreen> createState() => _PreviewScreenState();
 }
 
@@ -27,7 +28,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
     try {
       final jobId = await widget.downloadManager.enqueue(widget.songInfo.webpageUrl);
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ProgressScreen(jobId: jobId, songInfo: widget.songInfo, apiService: widget.apiService, downloadManager: widget.downloadManager)));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ProgressScreen(jobId: jobId, songInfo: widget.songInfo, apiService: widget.apiService, downloadManager: widget.downloadManager, onOpenLibrary: widget.onOpenLibrary)));
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _starting = false; });
     }
