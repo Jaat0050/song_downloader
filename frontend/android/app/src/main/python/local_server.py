@@ -21,6 +21,13 @@ _server_started_at = None
 _jobs: Dict[str, Dict[str, Any]] = {}
 _jobs_lock = threading.Lock()
 _executor = ThreadPoolExecutor(max_workers=2)
+_cleanup_started = False
+
+# Hardening limits. These are intentionally conservative for a song downloader.
+MIN_FREE_SPACE_BYTES = 100 * 1024 * 1024
+STALE_TEMP_SECONDS = 60 * 60
+JOB_STALE_SECONDS = 30 * 60
+NO_PROGRESS_SECONDS = 120
 
 
 def _safe_name(value: str) -> str:
@@ -71,13 +78,63 @@ def _transcode_to_mp3(source_path: str, output_path: str) -> None:
         raise RuntimeError('FFmpeg reported success but the MP3 file was not created.')
 
 
+def _cleanup_stale_files(download_dir: str) -> int:
+    """Remove only stale temporary source/partial files; never remove MP3s."""
+    removed = 0
+    now = time.time()
+    root = Path(download_dir)
+    if not root.exists():
+        return 0
+
+    for item in root.iterdir():
+        if not item.is_file() or item.suffix.lower() not in {'.part', '.webm', '.m4a', '.opus'}:
+            continue
+        try:
+            if now - item.stat().st_mtime > STALE_TEMP_SECONDS:
+                item.unlink()
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
+def _start_cleanup_thread(download_dir: str) -> None:
+    global _cleanup_started
+    if _cleanup_started:
+        return
+    _cleanup_started = True
+
+    def cleanup_loop() -> None:
+        while _server is not None:
+            try:
+                _cleanup_stale_files(download_dir)
+            except Exception:
+                pass
+            time.sleep(15 * 60)
+
+    threading.Thread(target=cleanup_loop, name='DownloadCleanup', daemon=True).start()
+
+
 def _download_job(job_id: str, url: str, download_dir: str) -> None:
+    last_progress_at = time.monotonic()
+
     def progress_hook(data: Dict[str, Any]) -> None:
+        nonlocal last_progress_at
         status = data.get('status')
+        now = time.monotonic()
+
+        if status == 'downloading':
+            # yt-dlp normally calls this hook regularly. Raising here prevents a
+            # network transfer which has stopped making progress from hanging forever.
+            if now - last_progress_at > NO_PROGRESS_SECONDS:
+                raise TimeoutError('Download made no progress for 2 minutes. Please retry.')
+            last_progress_at = now
+
         with _jobs_lock:
             job = _jobs.get(job_id)
             if not job:
                 return
+            job['last_progress_at'] = time.time()
             if status == 'downloading':
                 total = data.get('total_bytes') or data.get('total_bytes_estimate') or 0
                 downloaded = data.get('downloaded_bytes') or 0
@@ -99,6 +156,13 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
             'progress_hooks': [progress_hook],
         })
 
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job:
+                job['started_at'] = time.time()
+                job['last_progress_at'] = time.time()
+                job['status'] = 'extracting'
+
         with yt_dlp.YoutubeDL(options) as ydl:
             info = ydl.extract_info(url, download=True)
             source_path = ydl.prepare_filename(info)
@@ -112,6 +176,12 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
 
         if not source_path or not os.path.isfile(source_path):
             raise RuntimeError('yt-dlp reported success but the source audio file was not found.')
+
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job:
+                job['status'] = 'processing'
+                job['progress'] = 95.0
 
         title = _safe_name(str(info.get('title') or Path(source_path).stem))
         mp3_path = os.path.join(download_dir, f'{title}.mp3')
@@ -133,8 +203,14 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
                     'filepath': mp3_path,
                     'format': 'mp3',
                     'error': None,
+                    'completed_at': time.time(),
                 })
     except Exception as exc:
+        if source_path and os.path.exists(source_path):
+            try:
+                os.remove(source_path)
+            except OSError:
+                pass
         if mp3_path and os.path.exists(mp3_path):
             try:
                 os.remove(mp3_path)
@@ -145,8 +221,23 @@ def _download_job(job_id: str, url: str, download_dir: str) -> None:
             if job:
                 job.update({
                     'status': 'failed',
-                    'error': str(exc),
+                    'error': _friendly_error(exc),
+                    'completed_at': time.time(),
                 })
+
+
+def _friendly_error(exc: Exception) -> str:
+    message = str(exc).strip()
+    lowered = message.lower()
+    if isinstance(exc, TimeoutError) or 'timed out' in lowered or 'no progress' in lowered:
+        return 'Download timed out because no progress was detected. Please retry.'
+    if 'requested format is not available' in lowered:
+        return 'No compatible audio format is available for this YouTube video.'
+    if "sign in to confirm" in lowered or "not a bot" in lowered:
+        return 'YouTube temporarily restricted this request. Please try again later.'
+    if 'ffmpeg failed' in lowered or 'mp3 file was not created' in lowered:
+        return 'Audio conversion to MP3 failed on this device.'
+    return message or 'The download failed. Please try again.'
 
 
 def _directory_size(path: str) -> int:
@@ -167,17 +258,27 @@ def _job_summary() -> Dict[str, int]:
     summary = {
         'total': 0,
         'queued': 0,
+        'extracting': 0,
         'downloading': 0,
         'processing': 0,
         'completed': 0,
         'failed': 0,
     }
+    now = time.time()
     with _jobs_lock:
         summary['total'] = len(_jobs)
         for job in _jobs.values():
             status = job.get('status')
             if status in summary:
                 summary[status] += 1
+            if status in {'queued', 'extracting', 'downloading', 'processing'}:
+                started = job.get('started_at') or now
+                last = job.get('last_progress_at') or started
+                # Mark jobs as stale in health without killing a worker that may
+                # still be inside a native operation. Network operations have a
+                # socket timeout, and progress hooks enforce the no-progress limit.
+                if now - started > JOB_STALE_SECONDS and now - last > NO_PROGRESS_SECONDS:
+                    job['stale'] = True
     return summary
 
 
@@ -186,12 +287,14 @@ def create_app(files_dir: str) -> Flask:
     _server_files_dir = files_dir
     download_dir = os.path.join(files_dir, 'SongDownloader', 'downloads')
     os.makedirs(download_dir, exist_ok=True)
+    _cleanup_stale_files(download_dir)
+    _start_cleanup_thread(download_dir)
 
     app = Flask(__name__)
 
     @app.get('/api/health')
     def health():
-        uptime = int(time.monotonic() - _server_started_at) if _server_started_at else 0
+        uptime = int(time.time() - _server_started_at) if _server_started_at else 0
         usage = shutil.disk_usage(files_dir)
         jobs = _job_summary()
         return jsonify({
@@ -210,6 +313,7 @@ def create_app(files_dir: str) -> Flask:
             'download_storage_bytes': _directory_size(download_dir),
             'disk_free_bytes': usage.free,
             'disk_total_bytes': usage.total,
+            'storage_ready': usage.free >= MIN_FREE_SPACE_BYTES,
             'jobs': jobs,
             'worker_pool': {
                 'max_workers': 2,
@@ -242,7 +346,7 @@ def create_app(files_dir: str) -> Flask:
                 'format': 'mp3',
             }})
         except Exception as exc:
-            return jsonify({'success': False, 'error': {'code': 'EXTRACTION_FAILED', 'message': str(exc)}}), 500
+            return jsonify({'success': False, 'error': {'code': 'EXTRACTION_FAILED', 'message': _friendly_error(exc)}}), 500
 
     @app.post('/api/audio/download')
     def audio_download():
@@ -250,6 +354,22 @@ def create_app(files_dir: str) -> Flask:
         url = str(payload.get('url') or '').strip()
         if not _is_youtube_url(url):
             return jsonify({'success': False, 'error': {'code': 'INVALID_URL', 'message': 'Please provide a valid YouTube URL.'}}), 400
+
+        usage = shutil.disk_usage(files_dir)
+        if usage.free < MIN_FREE_SPACE_BYTES:
+            return jsonify({'success': False, 'error': {
+                'code': 'INSUFFICIENT_STORAGE',
+                'message': 'Not enough free device storage. Please free some space and try again.',
+            }}), 507
+
+        with _jobs_lock:
+            active_jobs = sum(1 for job in _jobs.values() if job.get('status') in {'queued', 'extracting', 'downloading', 'processing'})
+            if active_jobs >= 4:
+                return jsonify({'success': False, 'error': {
+                    'code': 'TOO_MANY_JOBS',
+                    'message': 'Too many downloads are active. Please wait for one to finish.',
+                }}), 429
+
         job_id = str(uuid.uuid4())
         with _jobs_lock:
             _jobs[job_id] = {
@@ -262,6 +382,10 @@ def create_app(files_dir: str) -> Flask:
                 'filepath': None,
                 'format': 'mp3',
                 'error': None,
+                'started_at': None,
+                'last_progress_at': None,
+                'completed_at': None,
+                'stale': False,
             }
         _executor.submit(_download_job, job_id, url, download_dir)
         return jsonify({'success': True, 'job_id': job_id, 'format': 'mp3'})
@@ -283,6 +407,8 @@ def create_app(files_dir: str) -> Flask:
             if job['status'] != 'completed' or not job.get('filepath'):
                 return jsonify({'success': False, 'error': {'code': 'FILE_NOT_READY', 'message': 'The audio file is not ready yet.'}}), 409
             filepath = job['filepath']
+        if not os.path.isfile(filepath):
+            return jsonify({'success': False, 'error': {'code': 'FILE_MISSING', 'message': 'The completed audio file is no longer available.'}}), 404
         return send_file(filepath, as_attachment=True, download_name=os.path.basename(filepath), mimetype='audio/mpeg')
 
     @app.delete('/api/audio/job/<job_id>')
@@ -300,10 +426,11 @@ def create_app(files_dir: str) -> Flask:
 
 
 def start_server(files_dir: str) -> str:
-    global _server, _server_thread, _server_url, _server_started_at
+    global _server, _server_thread, _server_url, _server_started_at, _cleanup_started
     if _server is not None:
         return _server_url
 
+    _cleanup_started = False
     app = create_app(files_dir)
     _server = make_server('127.0.0.1', 0, app, threaded=True)
     port = _server.server_port
@@ -315,7 +442,7 @@ def start_server(files_dir: str) -> str:
 
 
 def stop_server() -> None:
-    global _server, _server_thread, _server_url, _server_started_at
+    global _server, _server_thread, _server_url, _server_started_at, _cleanup_started
     if _server is not None:
         try:
             _server.shutdown()
@@ -324,3 +451,4 @@ def stop_server() -> None:
             _server_thread = None
             _server_url = None
             _server_started_at = None
+            _cleanup_started = False
