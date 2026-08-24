@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -9,6 +10,14 @@ class DownloadStorageService {
   static const String _backendUrlKey = 'song_downloader_backend_url';
   static const String _playlistsKey = 'song_downloader_playlists';
   static const String defaultBackendUrl = 'http://10.0.2.2:5000';
+
+  // All DownloadStorageService instances share this stream so screens which
+  // stay alive inside an IndexedStack can refresh immediately after a file is
+  // added or changed by another screen.
+  static final StreamController<void> _historyChanges =
+      StreamController<void>.broadcast();
+
+  static Stream<void> get historyChanges => _historyChanges.stream;
 
   Future<Directory> getDownloadDirectory() async {
     if (Platform.isAndroid) {
@@ -72,7 +81,11 @@ class DownloadStorageService {
 
   Future<void> saveHistory(List<HistoryItem> items) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_historyKey, items.map((x) => x.encode()).toList());
+    await prefs.setStringList(
+      _historyKey,
+      items.map((x) => x.encode()).toList(),
+    );
+    _historyChanges.add(null);
   }
 
   Future<void> addHistoryItem(HistoryItem item) async {
@@ -174,6 +187,7 @@ class DownloadStorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_historyKey);
     await prefs.remove(_playlistsKey);
+    _historyChanges.add(null);
   }
 
   Future<Map<String, List<String>>> loadPlaylists() async {
