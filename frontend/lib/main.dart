@@ -12,7 +12,6 @@ import 'services/background_audio_handler.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Permission.notification.request();
   final musicHandler = await initBackgroundAudio();
   runApp(SongDownloaderApp(musicHandler: musicHandler));
 }
@@ -31,7 +30,22 @@ class _SongDownloaderAppState extends State<SongDownloaderApp> {
   String? _startupError;
   bool _initialized = false;
 
-  @override void initState() { super.initState(); _initApp(); }
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestNotificationPermission();
+      _initApp();
+    });
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    try {
+      await Permission.notification.request();
+    } catch (_) {
+      // Notification permission is optional; the app can continue without it.
+    }
+  }
 
   Future<void> _initApp() async {
     if (mounted) setState(() { _startupError = null; _initialized = false; });
